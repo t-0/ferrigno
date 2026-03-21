@@ -11,6 +11,8 @@ impl Default for SignalSet {
 
 impl SignalSet {
     pub fn new() -> Self {
-        SignalSet { signalset_value: [0; 16] }
+        SignalSet {
+            signalset_value: [0; 16],
+        }
     }
 }

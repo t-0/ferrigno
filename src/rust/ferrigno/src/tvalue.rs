@@ -56,18 +56,18 @@ impl TValue {
     pub unsafe fn to_pointer(&self) -> *mut std::ffi::c_void {
         unsafe {
             match self.get_tagvariant() {
-                | TagVariant::ClosureCFunction => {
+                TagVariant::ClosureCFunction => {
                     ::core::mem::transmute::<CFunction, usize>(self.as_function().unwrap()) as *mut std::ffi::c_void
-                },
-                | TagVariant::User => (*self.as_user().unwrap()).get_raw_memory_mut(),
-                | TagVariant::Pointer => self.as_pointer().unwrap(),
-                | _ => {
+                }
+                TagVariant::User => (*self.as_user().unwrap()).get_raw_memory_mut(),
+                TagVariant::Pointer => self.as_pointer().unwrap(),
+                _ => {
                     if let Some(obj) = self.as_object() {
                         obj as *mut std::ffi::c_void
                     } else {
                         null_mut()
                     }
-                },
+                }
             }
         }
     }
@@ -118,22 +118,22 @@ impl TValue {
     }
     pub fn as_float(&self) -> Option<f64> {
         match self.tvalue_tagvariant {
-            | TagVariant::NumericNumber => Some(unsafe { self.tvalue_value.value_number }),
-            | TagVariant::NumericInteger => Some(unsafe { self.tvalue_value.value_integer } as f64),
-            | _ => None,
+            TagVariant::NumericNumber => Some(unsafe { self.tvalue_value.value_number }),
+            TagVariant::NumericInteger => Some(unsafe { self.tvalue_value.value_integer } as f64),
+            _ => None,
         }
     }
     pub fn as_boolean(&self) -> Option<bool> {
         match self.tvalue_tagvariant {
-            | TagVariant::BooleanTrue => Some(true),
-            | TagVariant::BooleanFalse => Some(false),
-            | _ => None,
+            TagVariant::BooleanTrue => Some(true),
+            TagVariant::BooleanFalse => Some(false),
+            _ => None,
         }
     }
     pub fn as_string(&self) -> Option<*mut TString> {
         match self.tvalue_tagvariant {
-            | TagVariant::StringShort | TagVariant::StringLong => Some(unsafe { self.tvalue_value.value_object as *mut TString }),
-            | _ => None,
+            TagVariant::StringShort | TagVariant::StringLong => Some(unsafe { self.tvalue_value.value_object as *mut TString }),
+            _ => None,
         }
     }
     pub fn as_table(&self) -> Option<*mut Table> {
@@ -145,10 +145,10 @@ impl TValue {
     }
     pub fn as_closure(&self) -> Option<*mut Closure> {
         match self.tvalue_tagvariant {
-            | TagVariant::ClosureL | TagVariant::ClosureC | TagVariant::ClosureCFunction => {
+            TagVariant::ClosureL | TagVariant::ClosureC | TagVariant::ClosureCFunction => {
                 Some(unsafe { self.tvalue_value.value_object as *mut Closure })
-            },
-            | _ => None,
+            }
+            _ => None,
         }
     }
     pub fn as_object(&self) -> Option<*mut Object> {
@@ -191,7 +191,11 @@ impl TValue {
         self.tvalue_collectable = false;
     }
     pub fn set_boolean(&mut self, value: bool) {
-        self.tvalue_tagvariant = if value { TagVariant::BooleanTrue } else { TagVariant::BooleanFalse };
+        self.tvalue_tagvariant = if value {
+            TagVariant::BooleanTrue
+        } else {
+            TagVariant::BooleanFalse
+        };
         self.tvalue_collectable = false;
     }
     pub fn set_nil(&mut self) {
@@ -240,7 +244,7 @@ impl TValue {
 pub unsafe fn aux_upvalue(fi: *mut TValue, n: i32, value: *mut *mut TValue, owner: *mut *mut Object) -> *const i8 {
     unsafe {
         match (*fi).get_tagvariant() {
-            | TagVariant::ClosureC => {
+            TagVariant::ClosureC => {
                 let closure: *mut Closure = (*fi).as_closure().unwrap();
                 if n > (*closure).closure_count_upvalues as i32 {
                     return null();
@@ -253,8 +257,8 @@ pub unsafe fn aux_upvalue(fi: *mut TValue, n: i32, value: *mut *mut TValue, owne
                     *owner = &mut *(closure as *mut Object);
                 }
                 c"".as_ptr()
-            },
-            | TagVariant::ClosureL => {
+            }
+            TagVariant::ClosureL => {
                 let closure: *mut Closure = (*fi).as_closure().unwrap();
                 let p: *mut Prototype = (*closure).closure_payload.closurepayload_lprototype;
                 if ((n as u32).wrapping_sub(1_u32) >= (*p).prototype_upvalues.get_size() as u32) {
@@ -278,8 +282,8 @@ pub unsafe fn aux_upvalue(fi: *mut TValue, n: i32, value: *mut *mut TValue, owne
                 } else {
                     ((*name).get_contents_mut()) as *const i8
                 }
-            },
-            | _ => null(),
+            }
+            _ => null(),
         }
     }
 }
@@ -312,7 +316,9 @@ pub unsafe fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> usize {
             length = LUA_N2SBUFFSZ - pos.len();
         } else {
             length = crate::utility::format_float_roundtrip((*obj).as_number().unwrap(), buf);
-            let all_digits = buf[..length].iter().all(|&b| b == b'-' || b.is_ascii_digit());
+            let all_digits = buf[..length]
+                .iter()
+                .all(|&b| b == b'-' || b.is_ascii_digit());
             if all_digits {
                 buf[length] = b'.';
                 length += 1;
@@ -390,18 +396,21 @@ pub unsafe fn luav_equalobj(state: *mut State, t1: *const TValue, t2: *const TVa
             }
         }
         match (*t1).get_tagvariant() {
-            | TagVariant::NilNil | TagVariant::BooleanFalse | TagVariant::BooleanTrue => return true,
-            | TagVariant::NumericInteger => return (*t1).as_integer().unwrap() == (*t2).as_integer().unwrap(),
-            | TagVariant::NumericNumber => return (*t1).as_number().unwrap() == (*t2).as_number().unwrap(),
-            | TagVariant::Pointer => return (*t1).as_pointer().unwrap() == (*t2).as_pointer().unwrap(),
-            | TagVariant::ClosureCFunction => return (*t1).as_function().unwrap() == (*t2).as_function().unwrap(),
-            | TagVariant::StringShort => {
+            TagVariant::NilNil | TagVariant::BooleanFalse | TagVariant::BooleanTrue => return true,
+            TagVariant::NumericInteger => return (*t1).as_integer().unwrap() == (*t2).as_integer().unwrap(),
+            TagVariant::NumericNumber => return (*t1).as_number().unwrap() == (*t2).as_number().unwrap(),
+            TagVariant::Pointer => return (*t1).as_pointer().unwrap() == (*t2).as_pointer().unwrap(),
+            TagVariant::ClosureCFunction => return (*t1).as_function().unwrap() == (*t2).as_function().unwrap(),
+            TagVariant::StringShort => {
                 return (*t1).as_string().unwrap() == (*t2).as_string().unwrap();
-            },
-            | TagVariant::StringLong => {
-                return luas_eqlngstr(&mut *(*t1).as_string().unwrap(), &mut *(*t2).as_string().unwrap());
-            },
-            | TagVariant::User => {
+            }
+            TagVariant::StringLong => {
+                return luas_eqlngstr(
+                    &mut *(*t1).as_string().unwrap(),
+                    &mut *(*t2).as_string().unwrap(),
+                );
+            }
+            TagVariant::User => {
                 let u1 = (*t1).as_user().unwrap();
                 let u2 = (*t2).as_user().unwrap();
                 if u1 == u2 {
@@ -433,8 +442,8 @@ pub unsafe fn luav_equalobj(state: *mut State, t1: *const TValue, t2: *const TVa
                         )
                     };
                 }
-            },
-            | TagVariant::Table => {
+            }
+            TagVariant::Table => {
                 let tb1 = (*t1).as_table().unwrap();
                 let tb2 = (*t2).as_table().unwrap();
                 if tb1 == tb2 {
@@ -466,8 +475,8 @@ pub unsafe fn luav_equalobj(state: *mut State, t1: *const TValue, t2: *const TVa
                         )
                     };
                 }
-            },
-            | _ => return (*t1).as_object() == (*t2).as_object(),
+            }
+            _ => return (*t1).as_object() == (*t2).as_object(),
         }
         if tm.is_null() {
             false
@@ -485,7 +494,7 @@ pub unsafe fn luav_objlen(state: *mut State, ra: *mut TValue, rb: *const TValue)
     unsafe {
         let tvalue: *const TValue;
         match (*rb).get_tagvariant() {
-            | TagVariant::Table => {
+            TagVariant::Table => {
                 let table: *mut Table = (*rb).as_table().unwrap();
                 tvalue = if ((*table).get_metatable()).is_null() {
                     null()
@@ -502,17 +511,17 @@ pub unsafe fn luav_objlen(state: *mut State, ra: *mut TValue, rb: *const TValue)
                     (*ra).set_integer(luah_getn(state, table) as i64);
                     return;
                 }
-            },
-            | TagVariant::StringShort | TagVariant::StringLong => {
+            }
+            TagVariant::StringShort | TagVariant::StringLong => {
                 (*ra).set_integer((*(*rb).as_string().unwrap()).get_length() as i64);
                 return;
-            },
-            | _ => {
+            }
+            _ => {
                 tvalue = luat_gettmbyobj(state, rb, TM_LEN);
                 if (*tvalue).get_tagvariant().to_tag_type() == TagType::Nil {
                     luag_typeerror(state, rb, c"get length of".as_ptr());
                 }
-            },
+            }
         }
         luat_calltmres(state, tvalue, rb, rb, ra);
     }

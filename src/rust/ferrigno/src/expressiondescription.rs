@@ -60,13 +60,20 @@ impl ExpressionDescription {
     pub unsafe fn is_c_int(expression_description: *mut ExpressionDescription) -> bool {
         unsafe {
             ExpressionDescription::is_k_int(expression_description)
-                && (*expression_description).expressiondescription_value.value_integer as usize <= ((1 << 8) - 1) as usize
+                && (*expression_description)
+                    .expressiondescription_value
+                    .value_integer as usize
+                    <= ((1 << 8) - 1) as usize
         }
     }
     pub unsafe fn is_sc_int(expression_description: *mut ExpressionDescription) -> bool {
         unsafe {
             ExpressionDescription::is_k_int(expression_description)
-                && fits_c((*expression_description).expressiondescription_value.value_integer)
+                && fits_c(
+                    (*expression_description)
+                        .expressiondescription_value
+                        .value_integer,
+                )
         }
     }
     pub unsafe fn init_exp(expression_description: *mut ExpressionDescription, expression_kind: ExpressionKind, i: i32) {
@@ -74,7 +81,9 @@ impl ExpressionDescription {
             (*expression_description).expressiondescription_t = -1;
             (*expression_description).expressiondescription_f = (*expression_description).expressiondescription_t;
             (*expression_description).expressiondescription_expressionkind = expression_kind;
-            (*expression_description).expressiondescription_value.value_info = i;
+            (*expression_description)
+                .expressiondescription_value
+                .value_info = i;
         }
     }
     pub unsafe fn codestring(expression_description: *mut ExpressionDescription, s: *mut TString) {
@@ -82,26 +91,36 @@ impl ExpressionDescription {
             (*expression_description).expressiondescription_t = -1;
             (*expression_description).expressiondescription_f = (*expression_description).expressiondescription_t;
             (*expression_description).expressiondescription_expressionkind = ExpressionKind::ConstantString;
-            (*expression_description).expressiondescription_value.value_tstring = s;
+            (*expression_description)
+                .expressiondescription_value
+                .value_tstring = s;
         }
     }
     pub unsafe fn tonumeral(expression_description: *const ExpressionDescription, v: *mut TValue) -> bool {
         unsafe {
             if (*expression_description).expressiondescription_t == (*expression_description).expressiondescription_f {
                 match (*expression_description).expressiondescription_expressionkind {
-                    | ExpressionKind::ConstantInteger => {
+                    ExpressionKind::ConstantInteger => {
                         if !v.is_null() {
-                            (*v).set_integer((*expression_description).expressiondescription_value.value_integer);
+                            (*v).set_integer(
+                                (*expression_description)
+                                    .expressiondescription_value
+                                    .value_integer,
+                            );
                         }
                         true
-                    },
-                    | ExpressionKind::ConstantNumber => {
+                    }
+                    ExpressionKind::ConstantNumber => {
                         if !v.is_null() {
-                            (*v).set_number((*expression_description).expressiondescription_value.value_number);
+                            (*v).set_number(
+                                (*expression_description)
+                                    .expressiondescription_value
+                                    .value_number,
+                            );
                         }
                         true
-                    },
-                    | _ => false,
+                    }
+                    _ => false,
                 }
             } else {
                 false
@@ -109,47 +128,56 @@ impl ExpressionDescription {
         }
     }
     pub unsafe fn const2val(
-        lexical_state: *mut LexicalState, _function_state: *mut FunctionState, expression_description: *const ExpressionDescription,
+        lexical_state: *mut LexicalState,
+        _function_state: *mut FunctionState,
+        expression_description: *const ExpressionDescription,
     ) -> *mut TValue {
         unsafe {
             &mut (*((*(*lexical_state).lexicalstate_dynamicdata)
                 .dynamicdata_active_variables
                 .vectort_pointer)
-                .add((*expression_description).expressiondescription_value.value_info as usize))
+                .add(
+                    (*expression_description)
+                        .expressiondescription_value
+                        .value_info as usize,
+                ))
             .variabledescription_k
         }
     }
     pub unsafe fn luak_exp2const(
-        &self, lexical_state: *mut LexicalState, function_state: *mut FunctionState, output: *mut TValue,
+        &self,
+        lexical_state: *mut LexicalState,
+        function_state: *mut FunctionState,
+        output: *mut TValue,
     ) -> bool {
         unsafe {
             if self.expressiondescription_t != self.expressiondescription_f {
                 false
             } else {
                 match self.expressiondescription_expressionkind {
-                    | ExpressionKind::False => {
+                    ExpressionKind::False => {
                         (*output).tvalue_set_tag_variant(TagVariant::BooleanFalse);
                         true
-                    },
-                    | ExpressionKind::True => {
+                    }
+                    ExpressionKind::True => {
                         (*output).tvalue_set_tag_variant(TagVariant::BooleanTrue);
                         true
-                    },
-                    | ExpressionKind::Nil => {
+                    }
+                    ExpressionKind::Nil => {
                         (*output).tvalue_set_tag_variant(TagVariant::NilNil);
                         true
-                    },
-                    | ExpressionKind::ConstantString => {
+                    }
+                    ExpressionKind::ConstantString => {
                         let tstring: *mut TString = self.expressiondescription_value.value_tstring;
                         (*output).set_object(tstring as *mut Object, (*tstring).get_tagvariant());
                         true
-                    },
-                    | ExpressionKind::Constant2 => {
+                    }
+                    ExpressionKind::Constant2 => {
                         let io2: *const TValue = ExpressionDescription::const2val(lexical_state, function_state, self);
                         (*output).copy_from(&*io2);
                         true
-                    },
-                    | _ => ExpressionDescription::tonumeral(self, output),
+                    }
+                    _ => ExpressionDescription::tonumeral(self, output),
                 }
             }
         }
@@ -157,28 +185,34 @@ impl ExpressionDescription {
     pub unsafe fn const2exp(v: *mut TValue, expression_description: *mut ExpressionDescription) {
         unsafe {
             match (*v).get_tagvariant() {
-                | TagVariant::NumericInteger => {
+                TagVariant::NumericInteger => {
                     (*expression_description).expressiondescription_expressionkind = ExpressionKind::ConstantInteger;
-                    (*expression_description).expressiondescription_value.value_integer = (*v).as_integer().unwrap();
-                },
-                | TagVariant::NumericNumber => {
+                    (*expression_description)
+                        .expressiondescription_value
+                        .value_integer = (*v).as_integer().unwrap();
+                }
+                TagVariant::NumericNumber => {
                     (*expression_description).expressiondescription_expressionkind = ExpressionKind::ConstantNumber;
-                    (*expression_description).expressiondescription_value.value_number = (*v).as_number().unwrap();
-                },
-                | TagVariant::BooleanFalse => {
+                    (*expression_description)
+                        .expressiondescription_value
+                        .value_number = (*v).as_number().unwrap();
+                }
+                TagVariant::BooleanFalse => {
                     (*expression_description).expressiondescription_expressionkind = ExpressionKind::False;
-                },
-                | TagVariant::BooleanTrue => {
+                }
+                TagVariant::BooleanTrue => {
                     (*expression_description).expressiondescription_expressionkind = ExpressionKind::True;
-                },
-                | TagVariant::NilNil => {
+                }
+                TagVariant::NilNil => {
                     (*expression_description).expressiondescription_expressionkind = ExpressionKind::Nil;
-                },
-                | TagVariant::StringShort | TagVariant::StringLong => {
+                }
+                TagVariant::StringShort | TagVariant::StringLong => {
                     (*expression_description).expressiondescription_expressionkind = ExpressionKind::ConstantString;
-                    (*expression_description).expressiondescription_value.value_tstring = (*v).as_string().unwrap();
-                },
-                | _ => {},
+                    (*expression_description)
+                        .expressiondescription_value
+                        .value_tstring = (*v).as_string().unwrap();
+                }
+                _ => {}
             };
         }
     }
@@ -186,9 +220,16 @@ impl ExpressionDescription {
         unsafe {
             let mut i: i64 = 0;
             if (*expression_description).expressiondescription_expressionkind == ExpressionKind::ConstantInteger {
-                i = (*expression_description).expressiondescription_value.value_integer;
+                i = (*expression_description)
+                    .expressiondescription_value
+                    .value_integer;
             } else if (*expression_description).expressiondescription_expressionkind == ExpressionKind::ConstantNumber
-                && F2I::Equal.convert_f64_i64((*expression_description).expressiondescription_value.value_number, &mut i)
+                && F2I::Equal.convert_f64_i64(
+                    (*expression_description)
+                        .expressiondescription_value
+                        .value_number,
+                    &mut i,
+                )
             {
                 *is_float = true;
             } else {
@@ -204,7 +245,10 @@ impl ExpressionDescription {
         }
     }
     pub unsafe fn luak_indexed(
-        state: *mut State, lexical_state: *mut LexicalState, function_state: *mut FunctionState, t: *mut ExpressionDescription,
+        state: *mut State,
+        lexical_state: *mut LexicalState,
+        function_state: *mut FunctionState,
+        t: *mut ExpressionDescription,
         k: *mut ExpressionDescription,
     ) {
         unsafe {
@@ -223,47 +267,78 @@ impl ExpressionDescription {
             if (*t).expressiondescription_expressionkind == ExpressionKind::VarargVariable {
                 // indexing the vararg parameter
                 let kreg: i32 = luak_exp2anyreg(state, lexical_state, function_state, k) as i32;
-                let vreg: u8 = (*t).expressiondescription_value.value_variable.valueregister_registerindex;
-                (*t).expressiondescription_value.value_index.valuereference_tag = vreg;
-                (*t).expressiondescription_value.value_index.valuereference_readonly = 0;
-                (*t).expressiondescription_value.value_index.valuereference_index = kreg as i16;
-                (*t).expressiondescription_value.value_index.valuereference_keystr = keystr;
+                let vreg: u8 = (*t)
+                    .expressiondescription_value
+                    .value_variable
+                    .valueregister_registerindex;
+                (*t).expressiondescription_value
+                    .value_index
+                    .valuereference_tag = vreg;
+                (*t).expressiondescription_value
+                    .value_index
+                    .valuereference_readonly = 0;
+                (*t).expressiondescription_value
+                    .value_index
+                    .valuereference_index = kreg as i16;
+                (*t).expressiondescription_value
+                    .value_index
+                    .valuereference_keystr = keystr;
                 (*t).expressiondescription_expressionkind = ExpressionKind::VarargIndex;
             } else if (*t).expressiondescription_expressionkind == ExpressionKind::UpValue {
                 let temp: i32 = (*t).expressiondescription_value.value_info;
-                (*t).expressiondescription_value.value_index.valuereference_tag = temp as u8;
-                (*t).expressiondescription_value.value_index.valuereference_readonly = 0;
-                (*t).expressiondescription_value.value_index.valuereference_index =
-                    (*k).expressiondescription_value.value_info as i16;
-                (*t).expressiondescription_value.value_index.valuereference_keystr = if is_k_string(function_state, k) {
+                (*t).expressiondescription_value
+                    .value_index
+                    .valuereference_tag = temp as u8;
+                (*t).expressiondescription_value
+                    .value_index
+                    .valuereference_readonly = 0;
+                (*t).expressiondescription_value
+                    .value_index
+                    .valuereference_index = (*k).expressiondescription_value.value_info as i16;
+                (*t).expressiondescription_value
+                    .value_index
+                    .valuereference_keystr = if is_k_string(function_state, k) {
                     (*k).expressiondescription_value.value_info
                 } else {
                     -1
                 };
                 (*t).expressiondescription_expressionkind = ExpressionKind::IndexUpValue;
             } else {
-                (*t).expressiondescription_value.value_index.valuereference_tag =
-                    (if (*t).expressiondescription_expressionkind == ExpressionKind::Local {
-                        (*t).expressiondescription_value.value_variable.valueregister_registerindex as i32
-                    } else {
-                        (*t).expressiondescription_value.value_info
-                    }) as u8;
-                (*t).expressiondescription_value.value_index.valuereference_readonly = 0;
+                (*t).expressiondescription_value
+                    .value_index
+                    .valuereference_tag = (if (*t).expressiondescription_expressionkind == ExpressionKind::Local {
+                    (*t).expressiondescription_value
+                        .value_variable
+                        .valueregister_registerindex as i32
+                } else {
+                    (*t).expressiondescription_value.value_info
+                }) as u8;
+                (*t).expressiondescription_value
+                    .value_index
+                    .valuereference_readonly = 0;
                 if is_k_string(function_state, k) {
-                    (*t).expressiondescription_value.value_index.valuereference_index =
-                        (*k).expressiondescription_value.value_info as i16;
-                    (*t).expressiondescription_value.value_index.valuereference_keystr =
-                        (*k).expressiondescription_value.value_info;
+                    (*t).expressiondescription_value
+                        .value_index
+                        .valuereference_index = (*k).expressiondescription_value.value_info as i16;
+                    (*t).expressiondescription_value
+                        .value_index
+                        .valuereference_keystr = (*k).expressiondescription_value.value_info;
                     (*t).expressiondescription_expressionkind = ExpressionKind::Field;
                 } else if ExpressionDescription::is_c_int(k) {
-                    (*t).expressiondescription_value.value_index.valuereference_index =
-                        (*k).expressiondescription_value.value_integer as i16;
-                    (*t).expressiondescription_value.value_index.valuereference_keystr = -1;
+                    (*t).expressiondescription_value
+                        .value_index
+                        .valuereference_index = (*k).expressiondescription_value.value_integer as i16;
+                    (*t).expressiondescription_value
+                        .value_index
+                        .valuereference_keystr = -1;
                     (*t).expressiondescription_expressionkind = ExpressionKind::IndexInteger;
                 } else {
-                    (*t).expressiondescription_value.value_index.valuereference_index =
-                        luak_exp2anyreg(state, lexical_state, function_state, k) as i16;
-                    (*t).expressiondescription_value.value_index.valuereference_keystr = -1;
+                    (*t).expressiondescription_value
+                        .value_index
+                        .valuereference_index = luak_exp2anyreg(state, lexical_state, function_state, k) as i16;
+                    (*t).expressiondescription_value
+                        .value_index
+                        .valuereference_keystr = -1;
                     (*t).expressiondescription_expressionkind = ExpressionKind::Indexed;
                 }
             };

@@ -10,17 +10,21 @@ impl LoadSource {
         use std::io::Read;
         let mut b = [0u8; 1];
         let n = match self {
-            | LoadSource::File(f) => f.read(&mut b).unwrap_or(0),
-            | LoadSource::Stdin => std::io::stdin().lock().read(&mut b).unwrap_or(0),
+            LoadSource::File(f) => f.read(&mut b).unwrap_or(0),
+            LoadSource::Stdin => std::io::stdin().lock().read(&mut b).unwrap_or(0),
         };
-        if n == 0 { None } else { Some(b[0]) }
+        if n == 0 {
+            None
+        } else {
+            Some(b[0])
+        }
     }
 
     pub fn read_chunk(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         use std::io::Read;
         match self {
-            | LoadSource::File(f) => f.read(buf),
-            | LoadSource::Stdin => std::io::stdin().lock().read(buf),
+            LoadSource::File(f) => f.read(buf),
+            LoadSource::Stdin => std::io::stdin().lock().read(buf),
         }
     }
 }

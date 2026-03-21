@@ -13,7 +13,7 @@ use std::ptr::*;
 pub unsafe fn luab_tonumber(state: *mut State) -> i32 {
     unsafe {
         match lua_type(state, 2) {
-            | None | Some(TagType::Nil) => {
+            None | Some(TagType::Nil) => {
                 if lua_type(state, 1) == Some(TagType::Numeric) {
                     lua_settop(state, 1);
                     return 1;
@@ -25,8 +25,8 @@ pub unsafe fn luab_tonumber(state: *mut State) -> i32 {
                     }
                     lual_checkany(state, 1);
                 }
-            },
-            | _ => {
+            }
+            _ => {
                 let mut l: usize = 0;
                 let mut n: i64 = 0;
                 let base: i64 = lual_checkinteger(state, 2);
@@ -39,7 +39,7 @@ pub unsafe fn luab_tonumber(state: *mut State) -> i32 {
                     (*state).push_integer(n);
                     return 1;
                 }
-            },
+            }
         };
         (*state).push_nil();
         1
@@ -73,10 +73,10 @@ pub unsafe fn luab_setmetatable(state: *mut State) -> i32 {
     unsafe {
         (*state).lual_checktype(1, TagType::Table);
         match lua_type(state, 2) {
-            | Some(TagType::Nil) | Some(TagType::Table) => {},
-            | _ => {
+            Some(TagType::Nil) | Some(TagType::Table) => {}
+            _ => {
                 lual_typeerror(state, 2, c"nil or table".as_ptr());
-            },
+            }
         };
         if lual_getmetafield(state, 1, c"__metatable".as_ptr()) != TagType::Nil {
             return lual_error(state, c"cannot change a protected metatable".as_ptr(), &[]);
@@ -97,10 +97,10 @@ pub unsafe fn luab_rawequal(state: *mut State) -> i32 {
 pub unsafe fn luab_rawlen(state: *mut State) -> i32 {
     unsafe {
         match lua_type(state, 1) {
-            | Some(TagType::Table) | Some(TagType::String) => {},
-            | _ => {
+            Some(TagType::Table) | Some(TagType::String) => {}
+            _ => {
                 lual_typeerror(state, 1, c"table or string".as_ptr());
-            },
+            }
         };
         (*state).push_integer(get_length_raw(state, 1) as i64);
         1
@@ -159,54 +159,63 @@ pub unsafe fn luab_collectgarbage(state: *mut State) -> i32 {
             null(),
         ];
         pub const OPTS_NUMBERS: [i32; 11] = [
-            GC_STOP, GC_RESTART, GC_COLLECT, GC_COUNT, GC_STEP, GC_SETPAUSE, GC_SETSTEPMUL, GC_ISRUNNING, GC_GENERATIONAL,
-            GC_INCREMENTAL, GC_PARAM,
+            GC_STOP,
+            GC_RESTART,
+            GC_COLLECT,
+            GC_COUNT,
+            GC_STEP,
+            GC_SETPAUSE,
+            GC_SETSTEPMUL,
+            GC_ISRUNNING,
+            GC_GENERATIONAL,
+            GC_INCREMENTAL,
+            GC_PARAM,
         ];
         let o: i32 = OPTS_NUMBERS[lual_checkoption(state, 1, c"collect".as_ptr(), OPTS.as_ptr()) as usize];
         match o {
-            | GC_COUNT => {
+            GC_COUNT => {
                 let k: i32 = lua_gc(state, o, &[]);
                 let b: i32 = lua_gc(state, GC_COUNTB, &[]);
                 if k != -1 {
                     (*state).push_number(k as f64 + b as f64 / 1024.0);
                     return 1;
                 }
-            },
-            | GC_STEP => {
+            }
+            GC_STEP => {
                 let step: i32 = lual_optinteger(state, 2, 0) as i32;
                 let res: i32 = lua_gc(state, o, &[step]);
                 if res != -1 {
                     (*state).push_boolean(0 != res);
                     return 1;
                 }
-            },
-            | GC_SETPAUSE | GC_SETSTEPMUL => {
+            }
+            GC_SETPAUSE | GC_SETSTEPMUL => {
                 let p: i32 = lual_optinteger(state, 2, 0) as i32;
                 let previous: i32 = lua_gc(state, o, &[p]);
                 if previous != -1 {
                     (*state).push_integer(previous as i64);
                     return 1;
                 }
-            },
-            | GC_ISRUNNING => {
+            }
+            GC_ISRUNNING => {
                 let res: i32 = lua_gc(state, o, &[]);
                 if res != -1 {
                     (*state).push_boolean(0 != res);
                     return 1;
                 }
-            },
-            | GC_GENERATIONAL => {
+            }
+            GC_GENERATIONAL => {
                 let minormul: i32 = lual_optinteger(state, 2, 0) as i32;
                 let majormul: i32 = lual_optinteger(state, 3, 0) as i32;
                 return pushmode(state, lua_gc(state, o, &[minormul, majormul]));
-            },
-            | GC_INCREMENTAL => {
+            }
+            GC_INCREMENTAL => {
                 let pause: i32 = lual_optinteger(state, 2, 0) as i32;
                 let stepmul: i32 = lual_optinteger(state, 3, 0) as i32;
                 let stepsize: i32 = lual_optinteger(state, 4, 0) as i32;
                 return pushmode(state, lua_gc(state, o, &[pause, stepmul, stepsize]));
-            },
-            | GC_PARAM => {
+            }
+            GC_PARAM => {
                 // collectgarbage("param", name [, value])
                 const PARAM_NAMES: [*const i8; 7] = [
                     c"minormul".as_ptr(),
@@ -224,14 +233,14 @@ pub unsafe fn luab_collectgarbage(state: *mut State) -> i32 {
                     (*state).push_integer(res as i64);
                     return 1;
                 }
-            },
-            | _ => {
+            }
+            _ => {
                 let res: i32 = lua_gc(state, o, &[]);
                 if res != -1 {
                     (*state).push_integer(res as i64);
                     return 1;
                 }
-            },
+            }
         }
         (*state).push_nil();
         1
@@ -241,12 +250,12 @@ pub unsafe fn luab_type(state: *mut State) -> i32 {
     unsafe {
         let t = lua_type(state, 1);
         match t {
-            | None => {
+            None => {
                 lual_argerror(state, 1, c"value expected".as_ptr());
-            },
-            | _ => {
+            }
+            _ => {
                 lua_pushstring(state, lua_typename(state, t));
-            },
+            }
         };
         1
     }
@@ -276,7 +285,12 @@ pub unsafe fn luab_pairs(state: *mut State) -> i32 {
             (*state).push_nil();
         } else {
             lua_pushvalue(state, 1);
-            (*state).lua_callk(1, 4, 0, Some(pairscont as unsafe fn(*mut State, Status, i64) -> i32));
+            (*state).lua_callk(
+                1,
+                4,
+                0,
+                Some(pairscont as unsafe fn(*mut State, Status, i64) -> i32),
+            );
         }
         4
     }
@@ -286,7 +300,11 @@ pub unsafe fn ipairsaux(state: *mut State) -> i32 {
         let mut i: i64 = lual_checkinteger(state, 2);
         i = (i as usize).wrapping_add(1_usize) as i64;
         (*state).push_integer(i);
-        if lua_geti(state, 1, i) == TagType::Nil { 1 } else { 2 }
+        if lua_geti(state, 1, i) == TagType::Nil {
+            1
+        } else {
+            2
+        }
     }
 }
 pub unsafe fn luab_ipairs(state: *mut State) -> i32 {
@@ -382,7 +400,12 @@ pub unsafe fn luab_dofile(state: *mut State) -> i32 {
         if lual_loadfilex(state, fname, null()) != Status::OK {
             return lua_error(state);
         }
-        (*state).lua_callk(0, -1, 0, Some(dofilecont as unsafe fn(*mut State, Status, i64) -> i32));
+        (*state).lua_callk(
+            0,
+            -1,
+            0,
+            Some(dofilecont as unsafe fn(*mut State, Status, i64) -> i32),
+        );
         dofilecont(state, Status::OK, 0)
     }
 }

@@ -78,14 +78,23 @@ pub unsafe fn db_getinfo(state: *mut State) -> i32 {
         let mut options: *const i8 = lual_optlstring(state, arg + 2, c"flnSrtu".as_ptr(), null_mut());
         checkstack(state, other_state, 3);
         if *options.add(0) as i32 == Character::AngleRight as i32 {
-            lual_argerror(state, arg + 2, c"invalid option Character::AngleRight".as_ptr());
+            lual_argerror(
+                state,
+                arg + 2,
+                c"invalid option Character::AngleRight".as_ptr(),
+            );
             0;
         }
         if lua_type(state, arg + 1) == Some(TagType::Closure) {
             options = lua_pushfstring(state, c">%s".as_ptr(), &[options.into()]);
             lua_pushvalue(state, arg + 1);
             lua_xmove(state, other_state, 1);
-        } else if lua_getstack(other_state, lual_checkinteger(state, arg + 1) as i32, &mut debuginfo) == 0 {
+        } else if lua_getstack(
+            other_state,
+            lual_checkinteger(state, arg + 1) as i32,
+            &mut debuginfo,
+        ) == 0
+        {
             (*state).push_nil();
             return 1;
         }
@@ -94,34 +103,78 @@ pub unsafe fn db_getinfo(state: *mut State) -> i32 {
         }
         (*state).lua_createtable();
         if !cstr_chr(options, Character::UpperS as i8).is_null() {
-            lua_pushlstring(state, debuginfo.debuginfo_source, debuginfo.debuginfo_source_length);
+            lua_pushlstring(
+                state,
+                debuginfo.debuginfo_source,
+                debuginfo.debuginfo_source_length,
+            );
             lua_setfield(state, -2, c"source".as_ptr());
-            settabss(state, c"short_src".as_ptr(), (debuginfo.debuginfo_short_source).as_mut_ptr());
-            settabsi(state, c"linedefined".as_ptr(), debuginfo.debuginfo_line_defined);
-            settabsi(state, c"lastlinedefined".as_ptr(), debuginfo.debuginfo_last_line_defined);
+            settabss(
+                state,
+                c"short_src".as_ptr(),
+                (debuginfo.debuginfo_short_source).as_mut_ptr(),
+            );
+            settabsi(
+                state,
+                c"linedefined".as_ptr(),
+                debuginfo.debuginfo_line_defined,
+            );
+            settabsi(
+                state,
+                c"lastlinedefined".as_ptr(),
+                debuginfo.debuginfo_last_line_defined,
+            );
             settabss(state, c"what".as_ptr(), debuginfo.debuginfo_what);
         }
         if !cstr_chr(options, Character::LowerL as i8).is_null() {
-            settabsi(state, c"currentline".as_ptr(), debuginfo.debuginfo_current_line);
+            settabsi(
+                state,
+                c"currentline".as_ptr(),
+                debuginfo.debuginfo_current_line,
+            );
         }
         if !cstr_chr(options, Character::LowerU as i8).is_null() {
-            settabsi(state, c"nups".as_ptr(), debuginfo.debuginfo_count_upvalues as i32);
-            settabsi(state, c"nparams".as_ptr(), debuginfo.debuginfo_count_parameters as i32);
-            settabsb(state, c"isvararg".as_ptr(), debuginfo.debuginfo_is_variable_arguments as i32);
+            settabsi(
+                state,
+                c"nups".as_ptr(),
+                debuginfo.debuginfo_count_upvalues as i32,
+            );
+            settabsi(
+                state,
+                c"nparams".as_ptr(),
+                debuginfo.debuginfo_count_parameters as i32,
+            );
+            settabsb(
+                state,
+                c"isvararg".as_ptr(),
+                debuginfo.debuginfo_is_variable_arguments as i32,
+            );
         }
         if !cstr_chr(options, Character::LowerN as i8).is_null() {
             settabss(state, c"name".as_ptr(), debuginfo.debuginfo_name);
             settabss(state, c"namewhat".as_ptr(), debuginfo.debuginfo_name_what);
         }
         if !cstr_chr(options, Character::LowerR as i8).is_null() {
-            settabsi(state, c"ftransfer".as_ptr(), debuginfo.debuginfo_transfer_function as i32);
-            settabsi(state, c"ntransfer".as_ptr(), debuginfo.debuginfo_count_transfer as i32);
+            settabsi(
+                state,
+                c"ftransfer".as_ptr(),
+                debuginfo.debuginfo_transfer_function as i32,
+            );
+            settabsi(
+                state,
+                c"ntransfer".as_ptr(),
+                debuginfo.debuginfo_count_transfer as i32,
+            );
         }
         if !cstr_chr(options, Character::LowerT as i8).is_null() {
             settabsb(
                 state,
                 c"istailcall".as_ptr(),
-                if debuginfo.debuginfo_is_tail_call { 1 } else { 0 },
+                if debuginfo.debuginfo_is_tail_call {
+                    1
+                } else {
+                    0
+                },
             );
             settabsi(state, c"extraargs".as_ptr(), debuginfo.debuginfo_extra_args);
         }
@@ -223,19 +276,19 @@ pub unsafe fn db_sethook(state: *mut State) -> i32 {
         let function: HookFunction;
         let other_state: *mut State = getthread(state, &mut arg);
         match lua_type(state, arg + 1) {
-            | None | Some(TagType::Nil) => {
+            None | Some(TagType::Nil) => {
                 lua_settop(state, arg + 1);
                 function = None;
                 mask = 0;
                 count = 0;
-            },
-            | _ => {
+            }
+            _ => {
                 let smask: *const i8 = lual_checklstring(state, arg + 2, null_mut());
                 (*state).lual_checktype(arg + 1, TagType::Closure);
                 count = lual_optinteger(state, arg + 3, 0) as i32;
                 function = Some(DebugInfo::hookf as unsafe fn(*mut State, *mut DebugInfo) -> ());
                 mask = makemask(smask, count);
-            },
+            }
         };
         if lual_getsubtable(state, LUA_REGISTRYINDEX, Strings::STRING_HOOKKEY) == 0 {
             lua_pushstring(state, c"k".as_ptr());
@@ -296,7 +349,10 @@ pub unsafe fn db_debug(state: *mut State) -> i32 {
             ) != Status::OK
                 || CallS::api_call(state, 0, 0, 0, 0, None) != Status::OK
             {
-                eprintln!("{}", std::ffi::CStr::from_ptr(lual_tolstring(state, -1, null_mut())).to_string_lossy());
+                eprintln!(
+                    "{}",
+                    std::ffi::CStr::from_ptr(lual_tolstring(state, -1, null_mut())).to_string_lossy()
+                );
             }
             lua_settop(state, 0);
         }
@@ -310,7 +366,11 @@ pub unsafe fn db_traceback(state: *mut State) -> i32 {
         if message.is_null() && !(TagType::is_none_or_nil(lua_type(state, arg + 1))) {
             lua_pushvalue(state, arg + 1);
         } else {
-            let level: i32 = lual_optinteger(state, arg + 2, (if state == other_state { 1 } else { 0 }) as i64) as i32;
+            let level: i32 = lual_optinteger(
+                state,
+                arg + 2,
+                (if state == other_state { 1 } else { 0 }) as i64,
+            ) as i32;
             lual_traceback(state, other_state, message, level);
         }
         1

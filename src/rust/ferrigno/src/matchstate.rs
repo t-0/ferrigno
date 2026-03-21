@@ -28,19 +28,19 @@ impl MatchState {
         unsafe {
             let state: *mut State = self.matchstate_interpreter;
             match tr {
-                | TagType::Closure => {
+                TagType::Closure => {
                     lua_pushvalue(state, 3);
                     let n: i32 = self.push_captures(s, e);
                     (*state).lua_callk(n, 1, 0, None);
-                },
-                | TagType::Table => {
+                }
+                TagType::Table => {
                     self.push_onecapture(0, s, e);
                     lua_gettable(state, 3);
-                },
-                | _ => {
+                }
+                _ => {
                     self.add_s(b, s, e);
                     return 1;
-                },
+                }
             }
             if !lua_toboolean(state, -1) {
                 lua_settop(state, -2);
@@ -60,8 +60,16 @@ impl MatchState {
     }
     pub unsafe fn push_captures(&mut self, s: *const i8, e: *const i8) -> i32 {
         unsafe {
-            let nlevels: i32 = if self.level as i32 == 0 && !s.is_null() { 1 } else { self.level as i32 };
-            lual_checkstack(self.matchstate_interpreter, nlevels, c"too many captures".as_ptr());
+            let nlevels: i32 = if self.level as i32 == 0 && !s.is_null() {
+                1
+            } else {
+                self.level as i32
+            };
+            lual_checkstack(
+                self.matchstate_interpreter,
+                nlevels,
+                c"too many captures".as_ptr(),
+            );
             for i in 0..nlevels {
                 self.push_onecapture(i, s, e);
             }
@@ -81,7 +89,11 @@ impl MatchState {
         unsafe {
             if i >= self.level as i32 {
                 if i != 0 {
-                    lual_error(self.matchstate_interpreter, c"invalid capture index %%%d".as_ptr(), &[(i + 1).into()]);
+                    lual_error(
+                        self.matchstate_interpreter,
+                        c"invalid capture index %%%d".as_ptr(),
+                        &[(i + 1).into()],
+                    );
                 }
                 *cap = s;
                 e.offset_from(s) as usize
@@ -89,7 +101,11 @@ impl MatchState {
                 let capl: i64 = self.capture[i as usize].matchstatecapture_length;
                 *cap = self.capture[i as usize].matchstatecapture_initial;
                 if capl == -1 {
-                    lual_error(self.matchstate_interpreter, c"unfinished capture".as_ptr(), &[]);
+                    lual_error(
+                        self.matchstate_interpreter,
+                        c"unfinished capture".as_ptr(),
+                        &[],
+                    );
                 } else if capl == -2_i64 {
                     (*(self.matchstate_interpreter))
                         .push_integer((self.capture[i as usize].matchstatecapture_initial).offset_from(self.src_init) as i64 + 1);
@@ -102,7 +118,11 @@ impl MatchState {
         unsafe {
             l -= Character::Digit1 as i32;
             if l < 0 || l >= self.level as i32 || self.capture[l as usize].matchstatecapture_length == -1_i64 {
-                return lual_error(self.matchstate_interpreter, c"invalid capture index %%%d".as_ptr(), &[(l + 1).into()]);
+                return lual_error(
+                    self.matchstate_interpreter,
+                    c"invalid capture index %%%d".as_ptr(),
+                    &[(l + 1).into()],
+                );
             }
             l
         }
@@ -117,7 +137,11 @@ impl MatchState {
                 }
                 level -= 1;
             }
-            lual_error(self.matchstate_interpreter, c"invalid pattern capture".as_ptr(), &[])
+            lual_error(
+                self.matchstate_interpreter,
+                c"invalid pattern capture".as_ptr(),
+                &[],
+            )
         }
     }
     pub unsafe fn classend(&mut self, mut p: *const i8) -> *const i8 {
@@ -127,13 +151,17 @@ impl MatchState {
             const PERCENT: i32 = Character::Percent as i32;
             const BRACKET_LEFT: i32 = Character::BracketLeft as i32;
             match *current_p as i32 {
-                | PERCENT => {
+                PERCENT => {
                     if p == self.p_end {
-                        lual_error(self.matchstate_interpreter, c"malformed pattern (ends with '%%')".as_ptr(), &[]);
+                        lual_error(
+                            self.matchstate_interpreter,
+                            c"malformed pattern (ends with '%%')".as_ptr(),
+                            &[],
+                        );
                     }
                     p.add(1)
-                },
-                | BRACKET_LEFT => {
+                }
+                BRACKET_LEFT => {
                     if *p as i32 == Character::Caret as i32 {
                         p = p.add(1);
                     }
@@ -155,8 +183,8 @@ impl MatchState {
                         }
                     }
                     p.add(1)
-                },
-                | _ => p,
+                }
+                _ => p,
             }
         }
     }
@@ -170,10 +198,10 @@ impl MatchState {
                 const PERCENT: i32 = Character::Percent as i32;
                 const BRACKET_LEFT: i32 = Character::BracketLeft as i32;
                 match *p as i32 {
-                    | PERIOD => true,
-                    | PERCENT => match_class(c, *p.add(1) as u8 as i32),
-                    | BRACKET_LEFT => matchbracketclass(c, p, ep.sub(1)),
-                    | _ => *p as u8 as i32 == c,
+                    PERIOD => true,
+                    PERCENT => match_class(c, *p.add(1) as u8 as i32),
+                    BRACKET_LEFT => matchbracketclass(c, p, ep.sub(1)),
+                    _ => *p as u8 as i32 == c,
                 }
             }
         }
@@ -245,7 +273,11 @@ impl MatchState {
         unsafe {
             let level: usize = self.level;
             if level >= MAX_CAPTURES {
-                lual_error(self.matchstate_interpreter, c"too many captures".as_ptr(), &[]);
+                lual_error(
+                    self.matchstate_interpreter,
+                    c"too many captures".as_ptr(),
+                    &[],
+                );
             }
             self.capture[level].matchstatecapture_initial = s;
             self.capture[level].matchstatecapture_length = what as i64;
@@ -276,8 +308,10 @@ impl MatchState {
             l = self.check_capture(l);
             let length: usize = self.capture[l as usize].matchstatecapture_length as usize;
             if (self.src_end).offset_from(s) as usize >= length
-                && std::slice::from_raw_parts(self.capture[l as usize].matchstatecapture_initial as *const u8, length)
-                    == std::slice::from_raw_parts(s as *const u8, length)
+                && std::slice::from_raw_parts(
+                    self.capture[l as usize].matchstatecapture_initial as *const u8,
+                    length,
+                ) == std::slice::from_raw_parts(s as *const u8, length)
             {
                 s.add(length)
             } else {
@@ -297,7 +331,11 @@ impl MatchState {
             let prev_matchdepth = self.matchdepth;
             self.matchdepth -= 1;
             if prev_matchdepth == 0 {
-                lual_error(self.matchstate_interpreter, c"pattern too complex".as_ptr(), &[]);
+                lual_error(
+                    self.matchstate_interpreter,
+                    c"pattern too complex".as_ptr(),
+                    &[],
+                );
             }
             loop {
                 if p == self.p_end {
@@ -305,7 +343,7 @@ impl MatchState {
                     break;
                 }
                 match Character::from(*p as i32) {
-                    | Character::ParenthesisLeft => {
+                    Character::ParenthesisLeft => {
                         if *p.add(1) as i32 == Character::ParenthesisRight as i32 {
                             s = self.start_capture(s, p.add(2), -2);
                         } else {
@@ -313,24 +351,24 @@ impl MatchState {
                         }
                         match_action = MATCH_RETURN;
                         break;
-                    },
-                    | Character::ParenthesisRight => {
+                    }
+                    Character::ParenthesisRight => {
                         s = self.end_capture(s, p.add(1));
                         match_action = MATCH_RETURN;
                         break;
-                    },
-                    | Character::Dollar => {
+                    }
+                    Character::Dollar => {
                         if p.add(1) == self.p_end {
                             s = if s == self.src_end { s } else { null() };
                             match_action = MATCH_RETURN;
                             break;
                         }
-                    },
-                    | Character::Percent => match Character::from(*p.add(1) as i32) {
-                        | Character::LowerB => {
+                    }
+                    Character::Percent => match Character::from(*p.add(1) as i32) {
+                        Character::LowerB => {
                             match_action = MATCH_BALANCE;
                             match match_action {
-                                | MATCH_BALANCE => {
+                                MATCH_BALANCE => {
                                     s = self.matchbalance(s, p.add(2));
                                     if s.is_null() {
                                         match_action = MATCH_RETURN;
@@ -338,8 +376,8 @@ impl MatchState {
                                     }
                                     p = p.add(4);
                                     continue;
-                                },
-                                | MATCH_FRONTIER => {
+                                }
+                                MATCH_FRONTIER => {
                                     p = p.add(2);
                                     if *p as i32 != Character::BracketLeft as i32 {
                                         lual_error(
@@ -349,8 +387,11 @@ impl MatchState {
                                         );
                                     }
                                     let ep: *const i8 = self.classend(p);
-                                    let previous: i8 =
-                                        (if s == self.src_init { Character::Null as i32 } else { *s.sub(1) as i32 }) as i8;
+                                    let previous: i8 = (if s == self.src_init {
+                                        Character::Null as i32
+                                    } else {
+                                        *s.sub(1) as i32
+                                    }) as i8;
                                     if !matchbracketclass(previous as u8 as i32, p, ep.sub(1))
                                         && matchbracketclass(*s as u8 as i32, p, ep.sub(1))
                                     {
@@ -361,8 +402,8 @@ impl MatchState {
                                         match_action = MATCH_RETURN;
                                         break;
                                     }
-                                },
-                                | _ => {
+                                }
+                                _ => {
                                     s = self.match_capture(s, *p.add(1) as u8 as i32);
                                     if s.is_null() {
                                         match_action = MATCH_RETURN;
@@ -370,13 +411,13 @@ impl MatchState {
                                     }
                                     p = p.add(2);
                                     continue;
-                                },
+                                }
                             }
-                        },
-                        | Character::LowerF => {
+                        }
+                        Character::LowerF => {
                             match_action = MATCH_FRONTIER;
                             match match_action {
-                                | MATCH_BALANCE => {
+                                MATCH_BALANCE => {
                                     s = self.matchbalance(s, p.add(2));
                                     if s.is_null() {
                                         match_action = MATCH_RETURN;
@@ -384,8 +425,8 @@ impl MatchState {
                                     }
                                     p = p.add(4);
                                     continue;
-                                },
-                                | MATCH_FRONTIER => {
+                                }
+                                MATCH_FRONTIER => {
                                     p = p.add(2);
                                     if *p as i32 != Character::BracketLeft as i32 {
                                         lual_error(
@@ -395,8 +436,11 @@ impl MatchState {
                                         );
                                     }
                                     let ep: *const i8 = self.classend(p);
-                                    let previous: i8 =
-                                        (if s == self.src_init { Character::Null as i32 } else { *s.sub(1) as i32 }) as i8;
+                                    let previous: i8 = (if s == self.src_init {
+                                        Character::Null as i32
+                                    } else {
+                                        *s.sub(1) as i32
+                                    }) as i8;
                                     if !matchbracketclass(previous as u8 as i32, p, ep.sub(1))
                                         && matchbracketclass(*s as u8 as i32, p, ep.sub(1))
                                     {
@@ -407,8 +451,8 @@ impl MatchState {
                                         match_action = MATCH_RETURN;
                                         break;
                                     }
-                                },
-                                | _ => {
+                                }
+                                _ => {
                                     s = self.match_capture(s, *p.add(1) as u8 as i32);
                                     if s.is_null() {
                                         match_action = MATCH_RETURN;
@@ -416,10 +460,10 @@ impl MatchState {
                                     }
                                     p = p.add(2);
                                     continue;
-                                },
+                                }
                             }
-                        },
-                        | Character::Digit0
+                        }
+                        Character::Digit0
                         | Character::Digit1
                         | Character::Digit2
                         | Character::Digit3
@@ -431,7 +475,7 @@ impl MatchState {
                         | Character::Digit9 => {
                             match_action = MATCH_CAPTURE;
                             match match_action {
-                                | MATCH_BALANCE => {
+                                MATCH_BALANCE => {
                                     s = self.matchbalance(s, p.add(2));
                                     if s.is_null() {
                                         match_action = MATCH_RETURN;
@@ -439,8 +483,8 @@ impl MatchState {
                                     }
                                     p = p.add(4);
                                     continue;
-                                },
-                                | MATCH_FRONTIER => {
+                                }
+                                MATCH_FRONTIER => {
                                     p = p.add(2);
                                     if *p as i32 != Character::BracketLeft as i32 {
                                         lual_error(
@@ -450,8 +494,11 @@ impl MatchState {
                                         );
                                     }
                                     let ep: *const i8 = self.classend(p);
-                                    let previous: i8 =
-                                        (if s == self.src_init { Character::Null as i32 } else { *s.sub(1) as i32 }) as i8;
+                                    let previous: i8 = (if s == self.src_init {
+                                        Character::Null as i32
+                                    } else {
+                                        *s.sub(1) as i32
+                                    }) as i8;
                                     if !matchbracketclass(previous as u8 as i32, p, ep.sub(1))
                                         && matchbracketclass(*s as u8 as i32, p, ep.sub(1))
                                     {
@@ -462,8 +509,8 @@ impl MatchState {
                                         match_action = MATCH_RETURN;
                                         break;
                                     }
-                                },
-                                | _ => {
+                                }
+                                _ => {
                                     s = self.match_capture(s, *p.add(1) as u8 as i32);
                                     if s.is_null() {
                                         match_action = MATCH_RETURN;
@@ -471,12 +518,12 @@ impl MatchState {
                                     }
                                     p = p.add(2);
                                     continue;
-                                },
+                                }
                             }
-                        },
-                        | _ => {},
+                        }
+                        _ => {}
                     },
-                    | _ => {},
+                    _ => {}
                 }
                 ep = self.classend(p);
                 if !self.singlematch(s, p, ep) {
@@ -496,7 +543,7 @@ impl MatchState {
                     const ASTERISK: i32 = Character::Asterisk as i32;
                     const HYPHEN: i32 = Character::Hyphen as i32;
                     match *ep as i32 {
-                        | QUESTION => {
+                        QUESTION => {
                             let res: *const i8 = self.match_pattern(s.add(1), ep.add(1));
                             if !res.is_null() {
                                 s = res;
@@ -505,33 +552,33 @@ impl MatchState {
                             } else {
                                 p = ep.add(1);
                             }
-                        },
-                        | PLUS => {
+                        }
+                        PLUS => {
                             s = s.add(1);
                             match_action = MATCH_MAX_EXPAND;
                             break;
-                        },
-                        | ASTERISK => {
+                        }
+                        ASTERISK => {
                             match_action = MATCH_MAX_EXPAND;
                             break;
-                        },
-                        | HYPHEN => {
+                        }
+                        HYPHEN => {
                             s = self.min_expand(s, p, ep);
                             match_action = MATCH_RETURN;
                             break;
-                        },
-                        | _ => {
+                        }
+                        _ => {
                             s = s.add(1);
                             p = ep;
-                        },
+                        }
                     }
                 }
             }
             match match_action {
-                | MATCH_MAX_EXPAND => {
+                MATCH_MAX_EXPAND => {
                     s = self.max_expand(s, p, ep);
-                },
-                | _ => {},
+                }
+                _ => {}
             }
             self.matchdepth += 1;
             self.matchdepth;
@@ -568,7 +615,8 @@ impl MatchState {
                         ((*b).prepare_with_size(1)).is_null();
                     }
                     let write_offset = (*b).buffer_loads.get_length();
-                    (*b).buffer_loads.set_length(((*b).buffer_loads.get_length() + 1) as usize);
+                    (*b).buffer_loads
+                        .set_length(((*b).buffer_loads.get_length() + 1) as usize);
                     *((*b).buffer_loads.at_mut(write_offset as isize)) = *p;
                 } else if *p as i32 == Character::Digit0 as i32 {
                     (*b).add_string_with_length(s, e.offset_from(s) as usize);
@@ -597,42 +645,46 @@ impl MatchState {
 pub unsafe fn match_class(c: i32, class_: i32) -> bool {
     let res: bool;
     match Character::from((class_ as u8).to_ascii_lowercase() as i32) {
-        | Character::LowerA => {
+        Character::LowerA => {
             res = Character::from(c).is_alpha();
-        },
-        | Character::LowerC => {
+        }
+        Character::LowerC => {
             res = Character::from(c).is_control();
-        },
-        | Character::LowerD => {
+        }
+        Character::LowerD => {
             res = Character::from(c).is_digit_decimal();
-        },
-        | Character::LowerG => {
+        }
+        Character::LowerG => {
             res = Character::from(c).is_printable();
-        },
-        | Character::LowerL => {
+        }
+        Character::LowerL => {
             res = Character::from(c).is_lower();
-        },
-        | Character::LowerP => {
+        }
+        Character::LowerP => {
             res = Character::from(c).is_punctuation();
-        },
-        | Character::LowerS => {
+        }
+        Character::LowerS => {
             res = Character::from(c).is_whitespace();
-        },
-        | Character::LowerU => {
+        }
+        Character::LowerU => {
             res = Character::from(c).is_upper();
-        },
-        | Character::LowerW => {
+        }
+        Character::LowerW => {
             res = Character::from(c).is_alphanumeric();
-        },
-        | Character::LowerX => {
+        }
+        Character::LowerX => {
             res = Character::from(c).is_digit_hexadecimal();
-        },
-        | Character::LowerZ => {
+        }
+        Character::LowerZ => {
             res = Character::from_negative(c) == Some(Character::Null);
-        },
-        | _ => return class_ == c,
+        }
+        _ => return class_ == c,
     }
-    if Character::from(class_).is_lower() { res } else { !res }
+    if Character::from(class_).is_lower() {
+        res
+    } else {
+        !res
+    }
 }
 pub unsafe fn matchbracketclass(c: i32, mut p: *const i8, ec: *const i8) -> bool {
     unsafe {

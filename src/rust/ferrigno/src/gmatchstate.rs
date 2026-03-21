@@ -23,7 +23,9 @@ impl GMatchState {
             let mut src = self.gmatchstate_source;
             while src <= self.gmatchstate_matchstate.src_end {
                 self.gmatchstate_matchstate.reprepstate();
-                let e = self.gmatchstate_matchstate.match_pattern(src, self.gmatchstate_pattern);
+                let e = self
+                    .gmatchstate_matchstate
+                    .match_pattern(src, self.gmatchstate_pattern);
                 if !e.is_null() && e != self.gmatchstate_lastmatch {
                     self.gmatchstate_lastmatch = e;
                     self.gmatchstate_source = self.gmatchstate_lastmatch;
@@ -52,7 +54,11 @@ impl GMatchState {
             (*gm).gmatchstate_source = source.add(initial);
             (*gm).gmatchstate_pattern = pattern;
             (*gm).gmatchstate_lastmatch = null();
-            lua_pushcclosure(state, Some(GMatchState::gmatch_aux as unsafe fn(*mut State) -> i32), 3);
+            lua_pushcclosure(
+                state,
+                Some(GMatchState::gmatch_aux as unsafe fn(*mut State) -> i32),
+                3,
+            );
             1
         }
     }

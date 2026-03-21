@@ -44,18 +44,21 @@ impl<'a> JsonParser<'a> {
 
     fn expect_byte(&mut self, expected: u8) -> Result<(), String> {
         match self.advance() {
-            | Some(b) if b == expected => Ok(()),
-            | Some(b) => Err(format!("expected '{}', got '{}'", expected as char, b as char)),
-            | None => Err(format!("expected '{}', got EOF", expected as char)),
+            Some(b) if b == expected => Ok(()),
+            Some(b) => Err(format!(
+                "expected '{}', got '{}'",
+                expected as char, b as char
+            )),
+            None => Err(format!("expected '{}', got EOF", expected as char)),
         }
     }
 
     fn expect_literal(&mut self, lit: &[u8]) -> Result<(), String> {
         for &e in lit {
             match self.advance() {
-                | Some(b) if b == e => {},
-                | Some(b) => return Err(format!("expected '{}', got '{}'", e as char, b as char)),
-                | None => return Err("unexpected EOF".to_string()),
+                Some(b) if b == e => {}
+                Some(b) => return Err(format!("expected '{}', got '{}'", e as char, b as char)),
+                None => return Err("unexpected EOF".to_string()),
             }
         }
         Ok(())
@@ -66,31 +69,31 @@ impl<'a> JsonParser<'a> {
         unsafe {
             self.skip_ws();
             match self.peek() {
-                | Some(b'n') => {
+                Some(b'n') => {
                     self.expect_literal(b"null")?;
                     lua_pushlightuserdata(state, json_null_ptr());
                     Ok(())
-                },
-                | Some(b't') => {
+                }
+                Some(b't') => {
                     self.expect_literal(b"true")?;
                     (*state).push_boolean(true);
                     Ok(())
-                },
-                | Some(b'f') => {
+                }
+                Some(b'f') => {
                     self.expect_literal(b"false")?;
                     (*state).push_boolean(false);
                     Ok(())
-                },
-                | Some(b'"') => {
+                }
+                Some(b'"') => {
                     let s = self.parse_string()?;
                     lua_pushlstring(state, s.as_ptr() as *const i8, s.len());
                     Ok(())
-                },
-                | Some(b'[') => self.parse_array(state),
-                | Some(b'{') => self.parse_object(state),
-                | Some(b'-') | Some(b'0'..=b'9') => self.parse_number(state),
-                | Some(b) => Err(format!("unexpected character '{}'", b as char)),
-                | None => Err("unexpected end of input".to_string()),
+                }
+                Some(b'[') => self.parse_array(state),
+                Some(b'{') => self.parse_object(state),
+                Some(b'-') | Some(b'0'..=b'9') => self.parse_number(state),
+                Some(b) => Err(format!("unexpected character '{}'", b as char)),
+                None => Err("unexpected end of input".to_string()),
             }
         }
     }
@@ -100,18 +103,18 @@ impl<'a> JsonParser<'a> {
         let mut out = Vec::new();
         loop {
             match self.advance() {
-                | None => return Err("unterminated string".to_string()),
-                | Some(b'"') => break,
-                | Some(b'\\') => match self.advance() {
-                    | Some(b'"') => out.push(b'"'),
-                    | Some(b'\\') => out.push(b'\\'),
-                    | Some(b'/') => out.push(b'/'),
-                    | Some(b'n') => out.push(b'\n'),
-                    | Some(b'r') => out.push(b'\r'),
-                    | Some(b't') => out.push(b'\t'),
-                    | Some(b'b') => out.push(0x08),
-                    | Some(b'f') => out.push(0x0C),
-                    | Some(b'u') => {
+                None => return Err("unterminated string".to_string()),
+                Some(b'"') => break,
+                Some(b'\\') => match self.advance() {
+                    Some(b'"') => out.push(b'"'),
+                    Some(b'\\') => out.push(b'\\'),
+                    Some(b'/') => out.push(b'/'),
+                    Some(b'n') => out.push(b'\n'),
+                    Some(b'r') => out.push(b'\r'),
+                    Some(b't') => out.push(b'\t'),
+                    Some(b'b') => out.push(0x08),
+                    Some(b'f') => out.push(0x0C),
+                    Some(b'u') => {
                         let cp = self.parse_hex4()?;
                         // Handle UTF-16 surrogate pairs
                         let codepoint = if (0xD800..=0xDBFF).contains(&cp) {
@@ -132,11 +135,11 @@ impl<'a> JsonParser<'a> {
                             cp as u32
                         };
                         push_utf8(codepoint, &mut out);
-                    },
-                    | Some(b) => return Err(format!("invalid escape '\\{}'", b as char)),
-                    | None => return Err("EOF in string escape".to_string()),
+                    }
+                    Some(b) => return Err(format!("invalid escape '\\{}'", b as char)),
+                    None => return Err("EOF in string escape".to_string()),
                 },
-                | Some(b) => out.push(b),
+                Some(b) => out.push(b),
             }
         }
         Ok(out)
@@ -147,10 +150,10 @@ impl<'a> JsonParser<'a> {
         for _ in 0..4 {
             let b = self.advance().ok_or("EOF in \\uXXXX escape")?;
             let digit = match b {
-                | b'0'..=b'9' => b - b'0',
-                | b'a'..=b'f' => b - b'a' + 10,
-                | b'A'..=b'F' => b - b'A' + 10,
-                | _ => return Err(format!("invalid hex digit '{}'", b as char)),
+                b'0'..=b'9' => b - b'0',
+                b'a'..=b'f' => b - b'a' + 10,
+                b'A'..=b'F' => b - b'A' + 10,
+                _ => return Err(format!("invalid hex digit '{}'", b as char)),
             };
             n = n * 16 + digit as u16;
         }
@@ -167,15 +170,15 @@ impl<'a> JsonParser<'a> {
             }
 
             match self.peek() {
-                | Some(b'0') => {
+                Some(b'0') => {
                     self.pos += 1;
-                },
-                | Some(b'1'..=b'9') => {
+                }
+                Some(b'1'..=b'9') => {
                     while matches!(self.peek(), Some(b'0'..=b'9')) {
                         self.pos += 1;
                     }
-                },
-                | _ => return Err("expected digit".to_string()),
+                }
+                _ => return Err("expected digit".to_string()),
             }
 
             if self.peek() == Some(b'.') {
@@ -241,10 +244,10 @@ impl<'a> JsonParser<'a> {
 
                 self.skip_ws();
                 match self.advance() {
-                    | Some(b',') => {},
-                    | Some(b']') => break,
-                    | Some(b) => return Err(format!("expected ',' or ']', got '{}'", b as char)),
-                    | None => return Err("unexpected EOF in array".to_string()),
+                    Some(b',') => {}
+                    Some(b']') => break,
+                    Some(b) => return Err(format!("expected ',' or ']', got '{}'", b as char)),
+                    None => return Err("unexpected EOF in array".to_string()),
                 }
             }
             Ok(())
@@ -279,10 +282,10 @@ impl<'a> JsonParser<'a> {
 
                 self.skip_ws();
                 match self.advance() {
-                    | Some(b',') => {},
-                    | Some(b'}') => break,
-                    | Some(b) => return Err(format!("expected ',' or '}}', got '{}'", b as char)),
-                    | None => return Err("unexpected EOF in object".to_string()),
+                    Some(b',') => {}
+                    Some(b'}') => break,
+                    Some(b) => return Err(format!("expected ',' or '}}', got '{}'", b as char)),
+                    None => return Err("unexpected EOF in object".to_string()),
                 }
             }
             Ok(())
@@ -314,18 +317,18 @@ fn encode_json_string(s: &[u8], buf: &mut Vec<u8>) {
     buf.push(b'"');
     for &b in s {
         match b {
-            | b'"' => buf.extend_from_slice(b"\\\""),
-            | b'\\' => buf.extend_from_slice(b"\\\\"),
-            | b'\n' => buf.extend_from_slice(b"\\n"),
-            | b'\r' => buf.extend_from_slice(b"\\r"),
-            | b'\t' => buf.extend_from_slice(b"\\t"),
-            | 0x08 => buf.extend_from_slice(b"\\b"),
-            | 0x0C => buf.extend_from_slice(b"\\f"),
-            | 0x00..=0x1F => {
+            b'"' => buf.extend_from_slice(b"\\\""),
+            b'\\' => buf.extend_from_slice(b"\\\\"),
+            b'\n' => buf.extend_from_slice(b"\\n"),
+            b'\r' => buf.extend_from_slice(b"\\r"),
+            b'\t' => buf.extend_from_slice(b"\\t"),
+            0x08 => buf.extend_from_slice(b"\\b"),
+            0x0C => buf.extend_from_slice(b"\\f"),
+            0x00..=0x1F => {
                 let s = format!("\\u{:04x}", b);
                 buf.extend_from_slice(s.as_bytes());
-            },
-            | _ => buf.push(b),
+            }
+            _ => buf.push(b),
         }
     }
     buf.push(b'"');
@@ -338,24 +341,28 @@ unsafe fn encode_value(state: *mut State, idx: i32, buf: &mut Vec<u8>, depth: us
         }
 
         // Normalize negative index to absolute before any stack changes
-        let abs = if idx < 0 { (*state).get_top() + idx + 1 } else { idx };
+        let abs = if idx < 0 {
+            (*state).get_top() + idx + 1
+        } else {
+            idx
+        };
 
         match lua_type(state, abs) {
-            | None | Some(TagType::Nil) => {
+            None | Some(TagType::Nil) => {
                 buf.extend_from_slice(b"null");
-            },
-            | Some(TagType::Pointer) => {
+            }
+            Some(TagType::Pointer) => {
                 // json.null light-userdata
                 buf.extend_from_slice(b"null");
-            },
-            | Some(TagType::Boolean) => {
+            }
+            Some(TagType::Boolean) => {
                 if lua_toboolean(state, abs) {
                     buf.extend_from_slice(b"true");
                 } else {
                     buf.extend_from_slice(b"false");
                 }
-            },
-            | Some(TagType::Numeric) => {
+            }
+            Some(TagType::Numeric) => {
                 if lua_isinteger(state, abs) {
                     let v = lua_tointegerx(state, abs, null_mut());
                     let s = format!("{}", v);
@@ -369,19 +376,19 @@ unsafe fn encode_value(state: *mut State, idx: i32, buf: &mut Vec<u8>, depth: us
                     let s = format!("{}", v);
                     buf.extend_from_slice(s.as_bytes());
                 }
-            },
-            | Some(TagType::String) => {
+            }
+            Some(TagType::String) => {
                 let mut slen = 0usize;
                 let sptr = lua_tolstring(state, abs, &mut slen);
                 let s = std::slice::from_raw_parts(sptr as *const u8, slen);
                 encode_json_string(s, buf);
-            },
-            | Some(TagType::Table) => {
+            }
+            Some(TagType::Table) => {
                 encode_table(state, abs, buf, depth)?;
-            },
-            | Some(other) => {
+            }
+            Some(other) => {
                 return Err(format!("cannot encode {:?} as JSON", other as u8));
-            },
+            }
         }
         Ok(())
     }
@@ -422,13 +429,13 @@ unsafe fn encode_table(state: *mut State, abs: i32, buf: &mut Vec<u8>, depth: us
                 // Encode key as a JSON string
                 let key_ty = lua_type(state, -2);
                 match key_ty {
-                    | Some(TagType::String) => {
+                    Some(TagType::String) => {
                         let mut klen = 0usize;
                         let kptr = lua_tolstring(state, -2, &mut klen);
                         let k = std::slice::from_raw_parts(kptr as *const u8, klen);
                         encode_json_string(k, buf);
-                    },
-                    | Some(TagType::Numeric) => {
+                    }
+                    Some(TagType::Numeric) => {
                         if lua_isinteger(state, -2) {
                             let v = lua_tointegerx(state, -2, null_mut());
                             let s = format!("\"{}\"", v);
@@ -438,12 +445,12 @@ unsafe fn encode_table(state: *mut State, abs: i32, buf: &mut Vec<u8>, depth: us
                             let s = format!("\"{}\"", v);
                             buf.extend_from_slice(s.as_bytes());
                         }
-                    },
-                    | _ => {
+                    }
+                    _ => {
                         // Skip non-string/number keys
                         lua_settop(state, -2); // pop value
                         continue;
-                    },
+                    }
                 }
 
                 buf.push(b':');
@@ -472,19 +479,23 @@ pub unsafe fn json_decode(state: *mut State) -> i32 {
         let mut parser = JsonParser::new(input);
 
         match parser.parse_value(state) {
-            | Ok(()) => {
+            Ok(()) => {
                 parser.skip_ws();
                 if parser.pos < parser.input.len() {
                     lua_settop(state, saved_top);
-                    return lual_error(state, c"json.decode: trailing garbage after JSON value".as_ptr(), &[]);
+                    return lual_error(
+                        state,
+                        c"json.decode: trailing garbage after JSON value".as_ptr(),
+                        &[],
+                    );
                 }
                 1
-            },
-            | Err(msg) => {
+            }
+            Err(msg) => {
                 lua_settop(state, saved_top);
                 let full = format!("json.decode: {}\0", msg);
                 lual_error(state, full.as_ptr() as *const i8, &[])
-            },
+            }
         }
     }
 }
@@ -494,14 +505,14 @@ pub unsafe fn json_encode(state: *mut State) -> i32 {
     unsafe {
         let mut buf = Vec::new();
         match encode_value(state, 1, &mut buf, 0) {
-            | Ok(()) => {
+            Ok(()) => {
                 lua_pushlstring(state, buf.as_ptr() as *const i8, buf.len());
                 1
-            },
-            | Err(msg) => {
+            }
+            Err(msg) => {
                 let full = format!("json.encode: {}\0", msg);
                 lual_error(state, full.as_ptr() as *const i8, &[])
-            },
+            }
         }
     }
 }

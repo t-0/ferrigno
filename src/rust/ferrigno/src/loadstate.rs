@@ -51,10 +51,10 @@ impl LoadState {
     pub unsafe fn load_byte(&mut self) -> u8 {
         unsafe {
             match (*(self.loadstate_zio)).load_byte() {
-                | None => {
+                None => {
                     self.error(c"truncated chunk".as_ptr());
-                },
-                | Some(x) => x,
+                }
+                Some(x) => x,
             }
         }
     }
@@ -84,14 +84,20 @@ impl LoadState {
     pub unsafe fn load_number(&mut self) -> f64 {
         unsafe {
             let mut x: f64 = 0.0;
-            self.load_block(&mut x as *mut f64 as *mut std::ffi::c_void, size_of::<f64>());
+            self.load_block(
+                &mut x as *mut f64 as *mut std::ffi::c_void,
+                size_of::<f64>(),
+            );
             x
         }
     }
     pub unsafe fn load_integer(&mut self) -> i64 {
         unsafe {
             let mut x: i64 = 0;
-            self.load_block(&mut x as *mut i64 as *mut std::ffi::c_void, size_of::<i64>());
+            self.load_block(
+                &mut x as *mut i64 as *mut std::ffi::c_void,
+                size_of::<i64>(),
+            );
             x
         }
     }
@@ -132,7 +138,10 @@ impl LoadState {
                     let io: *mut TValue = (*state).interpreter_top.stkidrel_pointer;
                     (*io).set_object(tstring as *mut Object, (*tstring).get_tagvariant());
                     (*state).luad_inctop();
-                    self.load_block(((*tstring).get_contents_mut()) as *mut std::ffi::c_void, size + 1);
+                    self.load_block(
+                        ((*tstring).get_contents_mut()) as *mut std::ffi::c_void,
+                        size + 1,
+                    );
                     (*state).interpreter_top.stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer.sub(1);
                 }
             }
@@ -142,7 +151,12 @@ impl LoadState {
             self.loadstate_nstr += 1;
             let mut sv = TValue::new(TagVariant::NilNil);
             sv.set_object(tstring as *mut Object, (*tstring).get_tagvariant());
-            luah_setint(state, self.loadstate_table, self.loadstate_nstr as i64, &mut sv);
+            luah_setint(
+                state,
+                self.loadstate_table,
+                self.loadstate_nstr as i64,
+                &mut sv,
+            );
             tstring
         }
     }
@@ -167,11 +181,14 @@ impl LoadState {
                     self.error(c"truncated fixed chunk".as_ptr());
                 }
                 (*prototype).prototype_code.vectort_pointer = addr as *mut u32;
-                (*prototype).prototype_code.set_size(n as usize * size_of::<u32>());
-            } else {
                 (*prototype)
                     .prototype_code
-                    .initialize_size(self.loadstate_interpreter, (n as usize).wrapping_mul(size_of::<u32>()));
+                    .set_size(n as usize * size_of::<u32>());
+            } else {
+                (*prototype).prototype_code.initialize_size(
+                    self.loadstate_interpreter,
+                    (n as usize).wrapping_mul(size_of::<u32>()),
+                );
                 self.load_block(
                     (*prototype).prototype_code.vectort_pointer as *mut std::ffi::c_void,
                     (n as usize).wrapping_mul(size_of::<u32>()),
@@ -195,26 +212,26 @@ impl LoadState {
                 let tvalue: *mut TValue = &mut *((*prototype).prototype_constants.vectort_pointer).add(i as usize) as *mut TValue;
                 let tagvariant = TagVariant::from(self.load_byte());
                 match tagvariant {
-                    | TagVariant::NilNil => {
+                    TagVariant::NilNil => {
                         (*tvalue).tvalue_set_tag_variant(TagVariant::NilNil);
-                    },
-                    | TagVariant::BooleanFalse => {
+                    }
+                    TagVariant::BooleanFalse => {
                         (*tvalue).tvalue_set_tag_variant(TagVariant::BooleanFalse);
-                    },
-                    | TagVariant::BooleanTrue => {
+                    }
+                    TagVariant::BooleanTrue => {
                         (*tvalue).tvalue_set_tag_variant(TagVariant::BooleanTrue);
-                    },
-                    | TagVariant::NumericNumber => {
+                    }
+                    TagVariant::NumericNumber => {
                         (*tvalue).set_number(self.load_number());
-                    },
-                    | TagVariant::NumericInteger => {
+                    }
+                    TagVariant::NumericInteger => {
                         (*tvalue).set_integer(self.load_integer());
-                    },
-                    | TagVariant::StringLong | TagVariant::StringShort => {
+                    }
+                    TagVariant::StringLong | TagVariant::StringShort => {
                         let tstring: *mut TString = self.load_string(prototype);
                         (*tvalue).set_object(tstring as *mut Object, (*tstring).get_tagvariant());
-                    },
-                    | _ => {},
+                    }
+                    _ => {}
                 }
             }
         }
@@ -377,7 +394,10 @@ impl LoadState {
     }
     pub unsafe fn check_header(&mut self) {
         unsafe {
-            self.check_literal(&*(DumpState::LUA_SIGNATURE).add(1), c"not a binary chunk".as_ptr());
+            self.check_literal(
+                &*(DumpState::LUA_SIGNATURE).add(1),
+                c"not a binary chunk".as_ptr(),
+            );
             if self.load_byte() != DumpState::LUAC_VERSION {
                 self.error(c"version mismatch".as_ptr());
             }
@@ -389,7 +409,10 @@ impl LoadState {
                 self.error(c"int size mismatch".as_ptr());
             }
             let mut int_val: i32 = 0;
-            self.load_block(&mut int_val as *mut i32 as *mut std::ffi::c_void, size_of::<i32>());
+            self.load_block(
+                &mut int_val as *mut i32 as *mut std::ffi::c_void,
+                size_of::<i32>(),
+            );
             if int_val != DumpState::LUAC_INT {
                 self.error(c"int format mismatch".as_ptr());
             }
@@ -397,7 +420,10 @@ impl LoadState {
                 self.error(c"instruction size mismatch".as_ptr());
             }
             let mut inst_val: u32 = 0;
-            self.load_block(&mut inst_val as *mut u32 as *mut std::ffi::c_void, size_of::<u32>());
+            self.load_block(
+                &mut inst_val as *mut u32 as *mut std::ffi::c_void,
+                size_of::<u32>(),
+            );
             if inst_val != DumpState::LUAC_INST {
                 self.error(c"instruction format mismatch".as_ptr());
             }
@@ -405,7 +431,10 @@ impl LoadState {
                 self.error(c"Lua integer size mismatch".as_ptr());
             }
             let mut integer_val: i64 = 0;
-            self.load_block(&mut integer_val as *mut i64 as *mut std::ffi::c_void, size_of::<i64>());
+            self.load_block(
+                &mut integer_val as *mut i64 as *mut std::ffi::c_void,
+                size_of::<i64>(),
+            );
             if integer_val != DumpState::LUAC_INTEGER {
                 self.error(c"Lua integer format mismatch".as_ptr());
             }
@@ -413,7 +442,10 @@ impl LoadState {
                 self.error(c"Lua number size mismatch".as_ptr());
             }
             let mut number_val: f64 = 0.0;
-            self.load_block(&mut number_val as *mut f64 as *mut std::ffi::c_void, size_of::<f64>());
+            self.load_block(
+                &mut number_val as *mut f64 as *mut std::ffi::c_void,
+                size_of::<f64>(),
+            );
             if number_val != DumpState::LUAC_NUM {
                 self.error(c"Lua number format mismatch".as_ptr());
             }

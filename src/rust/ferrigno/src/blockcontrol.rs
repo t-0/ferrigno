@@ -44,8 +44,12 @@ impl BlockControl {
         unsafe {
             self.blockcontrol_is_loop = is_loop;
             self.blockcontrol_count_active_variables = (*function_state).functionstate_count_active_variables;
-            self.blockcontrol_first_label = (*(*lexical_state).lexicalstate_dynamicdata).dynamicdata_labels.get_length();
-            self.blockcontrol_first_goto = (*(*lexical_state).lexicalstate_dynamicdata).dynamicdata_goto.get_length();
+            self.blockcontrol_first_label = (*(*lexical_state).lexicalstate_dynamicdata)
+                .dynamicdata_labels
+                .get_length();
+            self.blockcontrol_first_goto = (*(*lexical_state).lexicalstate_dynamicdata)
+                .dynamicdata_goto
+                .get_length();
             self.blockcontrol_count_upvalues = 0;
             self.blockcontrol_is_inside_tbc = !((*function_state).functionstate_blockcontrol).is_null()
                 && (*(*function_state).functionstate_blockcontrol).blockcontrol_is_inside_tbc;
@@ -56,8 +60,16 @@ impl BlockControl {
     pub unsafe fn leave_block(&mut self, state: *mut State, lexical_state: *mut LexicalState, function_state: *mut FunctionState) {
         unsafe {
             let mut has_close = false;
-            let stklevel: i32 = reglevel(lexical_state, function_state, self.blockcontrol_count_active_variables as i32);
-            removevars(lexical_state, function_state, self.blockcontrol_count_active_variables as i32);
+            let stklevel: i32 = reglevel(
+                lexical_state,
+                function_state,
+                self.blockcontrol_count_active_variables as i32,
+            );
+            removevars(
+                lexical_state,
+                function_state,
+                self.blockcontrol_count_active_variables as i32,
+            );
             if self.blockcontrol_is_loop {
                 has_close = (*lexical_state).create_label(
                     state,
@@ -68,7 +80,16 @@ impl BlockControl {
                 );
             }
             if !has_close && !(self.blockcontrol_previous).is_null() && self.blockcontrol_count_upvalues != 0 {
-                code_abck(state, lexical_state, function_state, OPCODE_CLOSE, stklevel, 0, 0, 0);
+                code_abck(
+                    state,
+                    lexical_state,
+                    function_state,
+                    OPCODE_CLOSE,
+                    stklevel,
+                    0,
+                    0,
+                    0,
+                );
             }
             (*function_state).functionstate_free_register = stklevel as u8;
             (*(*lexical_state).lexicalstate_dynamicdata)
@@ -77,12 +98,18 @@ impl BlockControl {
             (*function_state).functionstate_blockcontrol = self.blockcontrol_previous;
             if !(self.blockcontrol_previous).is_null() {
                 BlockControl::movegotosout(lexical_state, function_state, self);
-            } else if self.blockcontrol_first_goto < (*(*lexical_state).lexicalstate_dynamicdata).dynamicdata_goto.get_length() {
+            } else if self.blockcontrol_first_goto
+                < (*(*lexical_state).lexicalstate_dynamicdata)
+                    .dynamicdata_goto
+                    .get_length()
+            {
                 undefgoto(
                     state,
                     lexical_state,
                     function_state,
-                    &mut *((*(*lexical_state).lexicalstate_dynamicdata).dynamicdata_goto.vectort_pointer)
+                    &mut *((*(*lexical_state).lexicalstate_dynamicdata)
+                        .dynamicdata_goto
+                        .vectort_pointer)
                         .add(self.blockcontrol_first_goto),
                 );
             }
@@ -98,7 +125,9 @@ impl BlockControl {
         self.blockcontrol_count_upvalues
     }
     pub unsafe fn movegotosout(
-        lexical_state: *mut LexicalState, function_state: *mut FunctionState, block_control: *mut BlockControl,
+        lexical_state: *mut LexicalState,
+        function_state: *mut FunctionState,
+        block_control: *mut BlockControl,
     ) {
         unsafe {
             let gl: *mut VectorT<LabelDescription> = &mut (*(*lexical_state).lexicalstate_dynamicdata).dynamicdata_goto;

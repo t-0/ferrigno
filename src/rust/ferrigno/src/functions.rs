@@ -17,6 +17,8 @@ pub struct Reader {
 }
 impl Reader {
     pub fn new(function: ReadFunction) -> Self {
-        Reader { reader_read_function: function }
+        Reader {
+            reader_read_function: function,
+        }
     }
 }

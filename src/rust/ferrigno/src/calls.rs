@@ -9,7 +9,10 @@ pub struct CallS {
 }
 impl CallS {
     fn new(function: *mut TValue) -> Self {
-        CallS { calls_function: function, calls_count_results: 0 }
+        CallS {
+            calls_function: function,
+            calls_count_results: 0,
+        }
     }
     unsafe fn raw_call(&mut self, state: *mut State) {
         unsafe {
@@ -23,7 +26,11 @@ impl CallS {
         }
     }
     pub unsafe fn api_call(
-        state: *mut State, count_arguments: i32, count_results: i32, error_function: i32, context: i64,
+        state: *mut State,
+        count_arguments: i32,
+        count_results: i32,
+        error_function: i32,
+        context: i64,
         context_function: ContextFunction,
     ) -> Status {
         unsafe {
@@ -33,7 +40,12 @@ impl CallS {
                 let tvalue: *mut TValue = index2stack(state, error_function);
                 (tvalue as *mut i8).offset_from((*state).interpreter_stack.stkidrel_pointer as *mut i8) as i64
             };
-            let mut calls = CallS::new((*state).interpreter_top.stkidrel_pointer.sub((count_arguments + 1) as usize));
+            let mut calls = CallS::new(
+                (*state)
+                    .interpreter_top
+                    .stkidrel_pointer
+                    .sub((count_arguments + 1) as usize),
+            );
             let status: Status = if context_function.is_none() || !(*state).is_yieldable() {
                 calls.calls_count_results = count_results as usize;
                 luad_pcall(
@@ -60,9 +72,14 @@ impl CallS {
                 Status::OK
             };
             if count_results <= -1
-                && (*(*state).interpreter_callinfo).callinfo_top.stkidrel_pointer < (*state).interpreter_top.stkidrel_pointer
+                && (*(*state).interpreter_callinfo)
+                    .callinfo_top
+                    .stkidrel_pointer
+                    < (*state).interpreter_top.stkidrel_pointer
             {
-                (*(*state).interpreter_callinfo).callinfo_top.stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer;
+                (*(*state).interpreter_callinfo)
+                    .callinfo_top
+                    .stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer;
             }
             status
         }

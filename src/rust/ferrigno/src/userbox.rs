@@ -12,7 +12,11 @@ impl UserBox {
     pub unsafe fn resize_userbox(state: *mut State, index: i32, newsize: usize) -> *mut std::ffi::c_void {
         unsafe {
             let user_box: *mut UserBox = (*state).to_pointer(index) as *mut UserBox;
-            let temp: *mut std::ffi::c_void = raw_allocate((*user_box).userbox_pointer, (*user_box).userbox_size, newsize);
+            let temp: *mut std::ffi::c_void = raw_allocate(
+                (*user_box).userbox_pointer,
+                (*user_box).userbox_size,
+                newsize,
+            );
             if temp.is_null() && newsize > 0 {
                 lua_pushstring(state, c"not enough memory".as_ptr());
                 lua_error(state);
@@ -50,7 +54,12 @@ impl UserBox {
             (*ubox).userbox_pointer = null_mut();
             (*ubox).userbox_size = 0;
             if lual_newmetatable(state, c"_UBOX*".as_ptr()) != 0 {
-                lual_setfuncs(state, UserBox::USERBOX_METATABLE.as_ptr(), UserBox::USERBOX_METATABLE.len(), 0);
+                lual_setfuncs(
+                    state,
+                    UserBox::USERBOX_METATABLE.as_ptr(),
+                    UserBox::USERBOX_METATABLE.len(),
+                    0,
+                );
             }
             lua_setmetatable(state, -2);
         }

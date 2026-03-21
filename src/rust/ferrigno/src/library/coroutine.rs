@@ -42,40 +42,55 @@ unsafe fn luab_corunning(state: *mut State) -> i32 {
 }
 unsafe fn luab_close(state: *mut State) -> i32 {
     unsafe {
-        let coroutine: *mut State = if lua_type(state, 1).is_none() { state } else { get_coroutine(state) };
+        let coroutine: *mut State = if lua_type(state, 1).is_none() {
+            state
+        } else {
+            get_coroutine(state)
+        };
         match CoroutineStatus::auxiliary_status(state, coroutine) {
-            | CoroutineStatus::Dead | CoroutineStatus::Yield => match lua_closethread(coroutine, state) {
-                | Status::OK => {
+            CoroutineStatus::Dead | CoroutineStatus::Yield => match lua_closethread(coroutine, state) {
+                Status::OK => {
                     (*state).push_boolean(true);
                     1
-                },
-                | _ => {
+                }
+                _ => {
                     (*state).push_boolean(false);
                     lua_xmove(coroutine, state, 1);
                     2
-                },
+                }
             },
-            | CoroutineStatus::Running => {
+            CoroutineStatus::Running => {
                 if coroutine == (*(*state).interpreter_global).global_maininterpreter {
                     lual_error(state, c"cannot close main thread".as_ptr(), &[])
                 } else {
                     lua_closethread(coroutine, state);
                     0 // does not return
                 }
-            },
-            | x => lual_error(state, c"cannot close a %s coroutine".as_ptr(), &[x.get_name().into()]),
+            }
+            x => lual_error(
+                state,
+                c"cannot close a %s coroutine".as_ptr(),
+                &[x.get_name().into()],
+            ),
         }
     }
 }
 unsafe fn luab_costatus(state: *mut State) -> i32 {
     unsafe {
-        lua_pushstring(state, CoroutineStatus::auxiliary_status(state, get_coroutine(state)).get_name());
+        lua_pushstring(
+            state,
+            CoroutineStatus::auxiliary_status(state, get_coroutine(state)).get_name(),
+        );
     }
     1
 }
 unsafe fn luab_yieldable(state: *mut State) -> i32 {
     unsafe {
-        let coroutine: *mut State = if lua_type(state, 1).is_none() { state } else { get_coroutine(state) };
+        let coroutine: *mut State = if lua_type(state, 1).is_none() {
+            state
+        } else {
+            get_coroutine(state)
+        };
         (*state).push_boolean((*coroutine).is_yieldable());
     }
     1
@@ -138,7 +153,12 @@ const COROUTINE_FUNCTIONS: [RegisteredFunction; 8] = {
 pub unsafe fn luaopen_coroutine(state: *mut State) -> i32 {
     unsafe {
         (*state).lua_createtable();
-        lual_setfuncs(state, COROUTINE_FUNCTIONS.as_ptr(), COROUTINE_FUNCTIONS.len(), 0);
+        lual_setfuncs(
+            state,
+            COROUTINE_FUNCTIONS.as_ptr(),
+            COROUTINE_FUNCTIONS.len(),
+            0,
+        );
     }
     1
 }

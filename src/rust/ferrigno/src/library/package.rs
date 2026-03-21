@@ -49,7 +49,11 @@ pub unsafe fn noenv(state: *mut State) -> bool {
 pub unsafe fn setpath(state: *mut State, fieldname: *const i8, envname: *const i8, dft: *const i8) {
     unsafe {
         let dftmark: *const i8;
-        let nver: *const i8 = lua_pushfstring(state, c"%s%s".as_ptr(), &[envname.into(), c"_5_5".as_ptr().into()]);
+        let nver: *const i8 = lua_pushfstring(
+            state,
+            c"%s%s".as_ptr(),
+            &[envname.into(), c"_5_5".as_ptr().into()],
+        );
         let mut path: *const i8 = os_getenv(nver);
         if path.is_null() {
             path = os_getenv(envname);
@@ -68,16 +72,21 @@ pub unsafe fn setpath(state: *mut State, fieldname: *const i8, envname: *const i
                     b.add_string_with_length(path, dftmark.offset_from(path) as usize);
                     (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                     let write_offset = b.buffer_loads.get_length();
-                    b.buffer_loads.set_length((b.buffer_loads.get_length() + 1) as usize);
+                    b.buffer_loads
+                        .set_length((b.buffer_loads.get_length() + 1) as usize);
                     *(b.buffer_loads.loads_pointer).add(write_offset as usize) = *(c";".as_ptr());
                 }
                 b.add_string(dft);
                 if dftmark < path.add(length).sub(2) {
                     (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                     let write_offset = b.buffer_loads.get_length();
-                    b.buffer_loads.set_length((b.buffer_loads.get_length() + 1) as usize);
+                    b.buffer_loads
+                        .set_length((b.buffer_loads.get_length() + 1) as usize);
                     *(b.buffer_loads.loads_pointer).add(write_offset as usize) = *(c";".as_ptr());
-                    b.add_string_with_length(dftmark.add(2), path.add(length).sub(2).offset_from(dftmark) as usize);
+                    b.add_string_with_length(
+                        dftmark.add(2),
+                        path.add(length).sub(2).offset_from(dftmark) as usize,
+                    );
                 }
                 b.push_result();
             }
@@ -121,7 +130,11 @@ pub unsafe fn lookforfunc(state: *mut State, path: *const i8, sym: *const i8) ->
     unsafe {
         let mut reg: *mut std::ffi::c_void = checkclib(state, path);
         if reg.is_null() {
-            reg = lsys_load(state, path, (*sym as i32 == Character::Asterisk as i32) as i32);
+            reg = lsys_load(
+                state,
+                path,
+                (*sym as i32 == Character::Asterisk as i32) as i32,
+            );
             if reg.is_null() {
                 return 1;
             }
@@ -150,7 +163,14 @@ pub unsafe fn ll_loadlib(state: *mut State) -> i32 {
         } else {
             (*state).push_nil();
             lua_rotate(state, -2, 1);
-            lua_pushstring(state, if stat == 1 { c"absent".as_ptr() } else { c"init".as_ptr() });
+            lua_pushstring(
+                state,
+                if stat == 1 {
+                    c"absent".as_ptr()
+                } else {
+                    c"init".as_ptr()
+                },
+            );
             3
         }
     }
@@ -159,8 +179,8 @@ pub unsafe fn readable(filename: *const i8) -> i32 {
     unsafe {
         let cstr = std::ffi::CStr::from_ptr(filename);
         match cstr.to_str() {
-            | Ok(path) => std::fs::File::open(path).is_ok() as i32,
-            | Err(_) => 0,
+            Ok(path) => std::fs::File::open(path).is_ok() as i32,
+            Err(_) => 0,
         }
     }
 }
@@ -205,10 +225,14 @@ pub unsafe fn searchpath(state: *mut State, mut name: *const i8, path: *const i8
         lual_addgsub(&mut buffer, path, c"?".as_ptr(), name);
         (buffer.buffer_loads.get_length() < buffer.buffer_loads.get_size() || !(buffer.prepare_with_size(1)).is_null()) as i32;
         let write_offset = buffer.buffer_loads.get_length();
-        buffer.buffer_loads.set_length((buffer.buffer_loads.get_length() + 1) as usize);
+        buffer
+            .buffer_loads
+            .set_length((buffer.buffer_loads.get_length() + 1) as usize);
         *(buffer.buffer_loads.loads_pointer).add(write_offset as usize) = Character::Null as i8;
         pathname = buffer.buffer_loads.loads_pointer;
-        let endpathname = pathname.add(buffer.buffer_loads.get_length() as usize).sub(1);
+        let endpathname = pathname
+            .add(buffer.buffer_loads.get_length() as usize)
+            .sub(1);
         loop {
             filename = getnextfilename(&mut pathname, endpathname);
             if filename.is_null() {
@@ -246,7 +270,11 @@ pub unsafe fn findfile(state: *mut State, name: *const i8, pname: *const i8, dir
         lua_getfield(state, LUA_REGISTRYINDEX - 1, pname);
         let path: *const i8 = lua_tolstring(state, -1, null_mut());
         if path.is_null() {
-            lual_error(state, c"'package.%s' must be a string".as_ptr(), &[pname.into()]);
+            lual_error(
+                state,
+                c"'package.%s' must be a string".as_ptr(),
+                &[pname.into()],
+            );
         }
         searchpath(state, name, path, c".".as_ptr(), dirsep)
     }
@@ -260,9 +288,11 @@ pub unsafe fn checkload(state: *mut State, stat: i32, filename: *const i8) -> i3
             lual_error(
                 state,
                 c"error loading module '%s' from file '%s':\n\t%s".as_ptr(),
-                &[lua_tolstring(state, 1, null_mut()).into(),
-                filename.into(),
-                lua_tolstring(state, -1, null_mut()).into()],
+                &[
+                    lua_tolstring(state, 1, null_mut()).into(),
+                    filename.into(),
+                    lua_tolstring(state, -1, null_mut()).into(),
+                ],
             )
         }
     }
@@ -271,15 +301,21 @@ pub unsafe fn searcher_embedded(state: *mut State) -> i32 {
     unsafe {
         let name: *const i8 = lual_checklstring(state, 1, null_mut());
         let name_str = match std::ffi::CStr::from_ptr(name).to_str() {
-            | Ok(s) => s,
-            | Err(_) => return 1,
+            Ok(s) => s,
+            Err(_) => return 1,
         };
         // Try module_name.lua in embedded resources (relative to embedded base dir)
         let filename = format!("{}.lua", name_str.replace('.', "/"));
         if let Some(raw) = crate::state::resolve_embedded(&filename) {
             let content = crate::state::skip_shebang(raw);
             let c_filename = std::ffi::CString::new(format!("@embedded:{}", filename)).unwrap();
-            let status = lual_loadbufferx(state, content.as_ptr() as *const i8, content.len(), c_filename.as_ptr(), null());
+            let status = lual_loadbufferx(
+                state,
+                content.as_ptr() as *const i8,
+                content.len(),
+                c_filename.as_ptr(),
+                null(),
+            );
             if status == Status::OK {
                 lua_pushstring(state, c_filename.as_ptr());
                 return 2;
@@ -287,9 +323,11 @@ pub unsafe fn searcher_embedded(state: *mut State) -> i32 {
                 return lual_error(
                     state,
                     c"error loading module '%s' from embedded resource '%s':\n\t%s".as_ptr(),
-                    &[name.into(),
-                    c_filename.as_ptr().into(),
-                    lua_tolstring(state, -1, null_mut()).into()],
+                    &[
+                        name.into(),
+                        c_filename.as_ptr().into(),
+                        lua_tolstring(state, -1, null_mut()).into(),
+                    ],
                 );
             }
         }
@@ -306,7 +344,11 @@ pub unsafe fn searcher_lua(state: *mut State) -> i32 {
         if filename.is_null() {
             return 1;
         }
-        checkload(state, (lual_loadfilex(state, filename, null()) == Status::OK) as i32, filename)
+        checkload(
+            state,
+            (lual_loadfilex(state, filename, null()) == Status::OK) as i32,
+            filename,
+        )
     }
 }
 pub unsafe fn loadfunc(state: *mut State, filename: *const i8, mut modname: *const i8) -> i32 {
@@ -334,7 +376,11 @@ pub unsafe fn searcher_c(state: *mut State) -> i32 {
         if filename.is_null() {
             return 1;
         }
-        checkload(state, (loadfunc(state, filename, name) == 0) as i32, filename)
+        checkload(
+            state,
+            (loadfunc(state, filename, name) == 0) as i32,
+            filename,
+        )
     }
 }
 pub unsafe fn searcher_croot(state: *mut State) -> i32 {
@@ -345,7 +391,12 @@ pub unsafe fn searcher_croot(state: *mut State) -> i32 {
             return 0;
         }
         lua_pushlstring(state, name, p.offset_from(name) as usize);
-        let filename: *const i8 = findfile(state, lua_tolstring(state, -1, null_mut()), c"cpath".as_ptr(), c"/".as_ptr());
+        let filename: *const i8 = findfile(
+            state,
+            lua_tolstring(state, -1, null_mut()),
+            c"cpath".as_ptr(),
+            c"/".as_ptr(),
+        );
         if filename.is_null() {
             return 1;
         }
@@ -354,7 +405,11 @@ pub unsafe fn searcher_croot(state: *mut State) -> i32 {
             if stat != 2 {
                 return checkload(state, 0, filename);
             } else {
-                lua_pushfstring(state, c"no module '%s' in file '%s'".as_ptr(), &[name.into(), filename.into()]);
+                lua_pushfstring(
+                    state,
+                    c"no module '%s' in file '%s'".as_ptr(),
+                    &[name.into(), filename.into()],
+                );
                 return 1;
             }
         }
@@ -367,7 +422,11 @@ pub unsafe fn searcher_preload(state: *mut State) -> i32 {
         let name: *const i8 = lual_checklstring(state, 1, null_mut());
         lua_getfield(state, LUA_REGISTRYINDEX, c"_PRELOAD".as_ptr());
         if lua_getfield(state, -1, name) == TagType::Nil {
-            lua_pushfstring(state, c"no field package.preload['%s']".as_ptr(), &[name.into()]);
+            lua_pushfstring(
+                state,
+                c"no field package.preload['%s']".as_ptr(),
+                &[name.into()],
+            );
             1
         } else {
             lua_pushstring(state, c":preload:".as_ptr());
@@ -395,8 +454,7 @@ pub unsafe fn findloader(state: *mut State, name: *const i8) {
                 lual_error(
                     state,
                     c"module '%s' not found:%s".as_ptr(),
-                    &[name.into(),
-                    lua_tolstring(state, -1, null_mut()).into()],
+                    &[name.into(), lua_tolstring(state, -1, null_mut()).into()],
                 );
             }
             lua_pushstring(state, name);
@@ -504,7 +562,12 @@ pub unsafe fn luaopen_package(state: *mut State) -> i32 {
     unsafe {
         createclibstable(state);
         (*state).lua_createtable();
-        lual_setfuncs(state, PACKAGE_FUNCTIONS.as_ptr(), PACKAGE_FUNCTIONS.len(), 0);
+        lual_setfuncs(
+            state,
+            PACKAGE_FUNCTIONS.as_ptr(),
+            PACKAGE_FUNCTIONS.len(),
+            0,
+        );
         createsearcherstable(state);
         setpath(
             state,

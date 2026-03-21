@@ -52,14 +52,20 @@ impl Buffer {
     pub unsafe fn prepare_with_size_and_index(&mut self, size: usize, boxidx: i32) -> *mut BufferElement {
         unsafe {
             if self.buffer_loads.get_size() - self.buffer_loads.get_length() >= size as i32 {
-                self.buffer_loads.loads_pointer.add(self.buffer_loads.get_length() as usize)
+                self.buffer_loads
+                    .loads_pointer
+                    .add(self.buffer_loads.get_length() as usize)
             } else {
                 let state = self.buffer_interpreter;
                 let new_pointer: *mut BufferElement;
                 let newsize = self.new_with_size(size);
                 if self.buffer_loads.loads_pointer != (self.buffer_initial_data).as_mut_ptr() {
                     // Buffer already on stack as userbox — resize it
-                    let idx = if self.buffer_stack_index != 0 { self.buffer_stack_index } else { boxidx };
+                    let idx = if self.buffer_stack_index != 0 {
+                        self.buffer_stack_index
+                    } else {
+                        boxidx
+                    };
                     new_pointer = UserBox::resize_userbox(state, idx, newsize) as *mut BufferElement;
                 } else {
                     // First overflow: create userbox on stack
@@ -92,9 +98,17 @@ impl Buffer {
     pub unsafe fn add_string_with_length(&mut self, s: *const BufferElement, length: usize) {
         unsafe {
             if length > 0 {
-                let idx = if self.buffer_stack_index != 0 { self.buffer_stack_index } else { -1 };
+                let idx = if self.buffer_stack_index != 0 {
+                    self.buffer_stack_index
+                } else {
+                    -1
+                };
                 let raw: *mut BufferElement = self.prepare_with_size_and_index(length, idx);
-                std::ptr::copy_nonoverlapping(s as *const u8, raw as *mut u8, length * size_of::<BufferElement>());
+                std::ptr::copy_nonoverlapping(
+                    s as *const u8,
+                    raw as *mut u8,
+                    length * size_of::<BufferElement>(),
+                );
                 self.buffer_loads.add_length(length);
             }
         }
@@ -107,7 +121,11 @@ impl Buffer {
     pub unsafe fn push_result(&mut self) {
         unsafe {
             let state = self.buffer_interpreter;
-            lua_pushlstring(state, self.buffer_loads.loads_pointer, self.buffer_loads.get_length() as usize);
+            lua_pushlstring(
+                state,
+                self.buffer_loads.loads_pointer,
+                self.buffer_loads.get_length() as usize,
+            );
             if self.buffer_loads.loads_pointer != (self.buffer_initial_data).as_mut_ptr() && self.buffer_stack_index != 0 {
                 // Buffer is on stack as userbox — close it and remove
                 let idx = self.buffer_stack_index;
@@ -127,7 +145,11 @@ impl Buffer {
             let mut length: usize = 0;
             let s: *const BufferElement = lua_tolstring(state, -1, &mut length);
             let b: *mut BufferElement = self.prepare_with_size_and_index(length, -2);
-            std::ptr::copy_nonoverlapping(s as *const u8, b as *mut u8, length * size_of::<BufferElement>());
+            std::ptr::copy_nonoverlapping(
+                s as *const u8,
+                b as *mut u8,
+                length * size_of::<BufferElement>(),
+            );
             self.buffer_loads.add_length(length);
             lua_settop(state, -2);
         }

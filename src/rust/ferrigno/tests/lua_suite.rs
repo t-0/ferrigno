@@ -9,7 +9,10 @@ fn run_ferrigno(args: &[&str]) -> std::process::Output {
         let profile_dir = deps_dir.parent().expect("no profile dir");
         profile_dir.join("ferrigno").to_string_lossy().into_owned()
     });
-    Command::new(bin).args(args).output().expect("failed to run ferrigno")
+    Command::new(bin)
+        .args(args)
+        .output()
+        .expect("failed to run ferrigno")
 }
 
 #[test]

@@ -80,7 +80,12 @@ pub unsafe fn random_seed(state: *mut State, randomstate: *mut RandomState) {
     unsafe {
         let seed1: usize = os_time_now() as usize;
         let seed2: usize = state as usize;
-        set_seed(state, ((*randomstate).randomstate_data).as_mut_ptr(), seed1, seed2);
+        set_seed(
+            state,
+            ((*randomstate).randomstate_data).as_mut_ptr(),
+            seed1,
+            seed2,
+        );
     }
 }
 unsafe fn math_abs(state: *mut State) -> i32 {
@@ -223,10 +228,10 @@ unsafe fn math_log(state: *mut State) -> i32 {
         let res: f64;
 
         match lua_type(state, 2) {
-            | None | Some(TagType::Nil) => {
+            None | Some(TagType::Nil) => {
                 res = x.ln();
-            },
-            | _ => {
+            }
+            _ => {
                 let base: f64 = lual_checknumber(state, 2);
                 if base == 2.0f64 {
                     res = x.log2();
@@ -235,7 +240,7 @@ unsafe fn math_log(state: *mut State) -> i32 {
                 } else {
                     res = x.ln() / base.ln();
                 }
-            },
+            }
         }
         (*state).push_number(res);
         1
@@ -298,7 +303,11 @@ unsafe fn math_type(state: *mut State) -> i32 {
         if lua_type(state, 1) == Some(TagType::Numeric) {
             lua_pushstring(
                 state,
-                if lua_isinteger(state, 1) { c"integer".as_ptr() } else { c"float".as_ptr() },
+                if lua_isinteger(state, 1) {
+                    c"integer".as_ptr()
+                } else {
+                    c"float".as_ptr()
+                },
             );
         } else {
             lual_checkany(state, 1);
@@ -315,25 +324,25 @@ unsafe fn math_random(state: *mut State) -> i32 {
         let ransate: *mut RandomState = (*state).to_pointer(LUA_REGISTRYINDEX - 1) as *mut RandomState;
         let rv: usize = next_random(((*ransate).randomstate_data).as_mut_ptr());
         match (*state).get_top() {
-            | 0 => {
+            0 => {
                 (*state).push_number(i2d(rv));
                 return 1;
-            },
-            | 1 => {
+            }
+            1 => {
                 low = 1;
                 high = lual_checkinteger(state, 1);
                 if high == 0 {
                     (*state).push_integer(rv as i64);
                     return 1;
                 }
-            },
-            | 2 => {
+            }
+            2 => {
                 low = lual_checkinteger(state, 1);
                 high = lual_checkinteger(state, 2);
-            },
-            | _ => {
+            }
+            _ => {
                 return lual_error(state, c"wrong number of arguments".as_ptr(), &[]);
-            },
+            }
         }
         if low > high {
             lual_argerror(state, 1, c"interval is empty".as_ptr());
@@ -352,7 +361,12 @@ unsafe fn math_randomseed(state: *mut State) -> i32 {
         } else {
             let n1: i64 = lual_checkinteger(state, 1);
             let n2: i64 = lual_optinteger(state, 2, 0);
-            set_seed(state, ((*randomstate).randomstate_data).as_mut_ptr(), n1 as usize, n2 as usize);
+            set_seed(
+                state,
+                ((*randomstate).randomstate_data).as_mut_ptr(),
+                n1 as usize,
+                n2 as usize,
+            );
         }
         2
     }
@@ -378,7 +392,12 @@ unsafe fn set_random_function(state: *mut State) {
         let ranstate: *mut RandomState = User::lua_newuserdatauv(state, size_of::<RandomState>(), 0) as *mut RandomState;
         random_seed(state, ranstate);
         lua_settop(state, -3);
-        lual_setfuncs(state, MATH_RANDOM_FUNCTIONS.as_ptr(), MATH_RANDOM_FUNCTIONS.len(), 1);
+        lual_setfuncs(
+            state,
+            MATH_RANDOM_FUNCTIONS.as_ptr(),
+            MATH_RANDOM_FUNCTIONS.len(),
+            1,
+        );
     }
 }
 unsafe fn math_frexp(state: *mut State) -> i32 {

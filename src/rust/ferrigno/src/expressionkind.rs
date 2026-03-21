@@ -28,17 +28,17 @@ pub enum ExpressionKind {
 impl ExpressionKind {
     pub fn is_index(&self) -> bool {
         match self {
-            | ExpressionKind::Indexed
+            ExpressionKind::Indexed
             | ExpressionKind::VarargIndex
             | ExpressionKind::IndexUpValue
             | ExpressionKind::IndexInteger
             | ExpressionKind::Field => true,
-            | _ => false,
+            _ => false,
         }
     }
     pub fn is_index_plus(&self) -> bool {
         match self {
-            | ExpressionKind::Local
+            ExpressionKind::Local
             | ExpressionKind::VarargVariable
             | ExpressionKind::UpValue
             | ExpressionKind::Constant2
@@ -47,7 +47,7 @@ impl ExpressionKind {
             | ExpressionKind::IndexUpValue
             | ExpressionKind::IndexInteger
             | ExpressionKind::Field => true,
-            | _ => false,
+            _ => false,
         }
     }
 }

@@ -50,15 +50,20 @@ impl ZIO {
             } else {
                 self.luaz_fill()
             };
-            if ret == -1 { None } else { Some(ret as u8) }
+            if ret == -1 {
+                None
+            } else {
+                Some(ret as u8)
+            }
         }
     }
     unsafe fn luaz_fill(&mut self) -> CharacterUnderlyingType {
         unsafe {
             let mut size: usize = 0;
-            let buffer: *const i8 = (self.zio_reader).reader_read_function.expect("non-null function pointer")(
-                self.zio_interpreter, self.zio_data, &mut size,
-            );
+            let buffer: *const i8 =
+                (self.zio_reader)
+                    .reader_read_function
+                    .expect("non-null function pointer")(self.zio_interpreter, self.zio_data, &mut size);
             if buffer.is_null() || size == 0 {
                 -1
             } else {
@@ -99,7 +104,11 @@ impl ZIO {
                         self.zio_pointer;
                     }
                 }
-                let m: usize = if n <= self.zio_length { n } else { self.zio_length };
+                let m: usize = if n <= self.zio_length {
+                    n
+                } else {
+                    self.zio_length
+                };
                 std::ptr::copy_nonoverlapping(self.zio_pointer as *const u8, b as *mut u8, m);
                 self.zio_length -= m;
                 self.zio_pointer = (self.zio_pointer).add(m);

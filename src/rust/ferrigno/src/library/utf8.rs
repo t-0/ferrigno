@@ -15,7 +15,14 @@ pub fn u_posrelat(position: i64, length: usize) -> i64 {
 }
 pub unsafe fn utf8_decode(mut s: *const i8, value: *mut u32, strict: bool) -> *const i8 {
     unsafe {
-        pub const LIMITS: [u32; 6] = [0xFFFFFFFFu32, 0x80u32, 0x800u32, 0x10000u32, 0x200000u32, 0x4000000u32];
+        pub const LIMITS: [u32; 6] = [
+            0xFFFFFFFFu32,
+            0x80u32,
+            0x800u32,
+            0x10000u32,
+            0x200000u32,
+            0x4000000u32,
+        ];
         let mut c: u32 = *s.add(0) as u8 as u32;
         let mut res: u32 = 0;
         if c < 0x80 {
@@ -166,7 +173,11 @@ pub unsafe fn byteoffset(state: *mut State) -> i32 {
             }
         } else {
             if *s.add(posi as usize) as i32 & 0xc0_i32 == 0x80_i32 {
-                return lual_error(state, c"initial position is a continuation byte".as_ptr(), &[]);
+                return lual_error(
+                    state,
+                    c"initial position is a continuation byte".as_ptr(),
+                    &[],
+                );
             }
             if n < 0 {
                 while n < 0 && posi > 0 {
@@ -198,7 +209,11 @@ pub unsafe fn byteoffset(state: *mut State) -> i32 {
         (*state).push_integer(posi + 1);
         if *s.add(posi as usize) as i32 & 0x80_i32 != 0 {
             if *s.add(posi as usize) as i32 & 0xc0_i32 == 0x80_i32 {
-                return lual_error(state, c"initial position is a continuation byte".as_ptr(), &[]);
+                return lual_error(
+                    state,
+                    c"initial position is a continuation byte".as_ptr(),
+                    &[],
+                );
             }
             while posi + 1 < length as i64 && *s.add((posi + 1) as usize) as i32 & 0xc0_i32 == 0x80_i32 {
                 posi += 1;

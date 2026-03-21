@@ -43,10 +43,10 @@ pub unsafe fn table_insert(state: *mut State) -> i32 {
         let mut e: i64 = lual_len(state, 1);
         e = (e as usize + 1) as i64;
         match (*state).get_top() {
-            | 2 => {
+            2 => {
                 position = e;
-            },
-            | 3 => {
+            }
+            3 => {
                 let mut i: i64;
                 position = lual_checkinteger(state, 2);
                 if position < 1 || position > e {
@@ -59,10 +59,14 @@ pub unsafe fn table_insert(state: *mut State) -> i32 {
                     lua_seti(state, 1, i);
                     i -= 1;
                 }
-            },
-            | _ => {
-                return lual_error(state, c"wrong number of arguments to 'insert'".as_ptr(), &[]);
-            },
+            }
+            _ => {
+                return lual_error(
+                    state,
+                    c"wrong number of arguments to 'insert'".as_ptr(),
+                    &[],
+                );
+            }
         }
         lua_seti(state, 1, position);
         0
@@ -94,8 +98,8 @@ pub unsafe fn table_move(state: *mut State) -> i32 {
         let e: i64 = lual_checkinteger(state, 3);
         let t: i64 = lual_checkinteger(state, 4);
         let tag: i32 = match lua_type(state, 5) {
-            | None | Some(TagType::Nil) => 1,
-            | _ => 5,
+            None | Some(TagType::Nil) => 1,
+            _ => 5,
         };
         checktab(state, 1, 1);
         checktab(state, tag, 2);
@@ -135,8 +139,7 @@ pub unsafe fn addfield(state: *mut State, b: *mut Buffer, i: i64) {
             lual_error(
                 state,
                 c"invalid value (%s) at index %I in table for 'concat'".as_ptr(),
-                &[lua_typename(state, lua_type(state, -1)).into(),
-                i.into()],
+                &[lua_typename(state, lua_type(state, -1)).into(), i.into()],
             );
         }
         (*b).add_value();
@@ -185,8 +188,8 @@ pub unsafe fn table_unpack(state: *mut State) -> i32 {
         let mut n: usize;
         let mut i: i64 = lual_optinteger(state, 2, 1);
         let e = match lua_type(state, 3) {
-            | None | Some(TagType::Nil) => lual_len(state, 1),
-            | _ => lual_checkinteger(state, 3),
+            None | Some(TagType::Nil) => lual_len(state, 1),
+            _ => lual_checkinteger(state, 3),
         };
         if i > e {
             return 0;
@@ -216,7 +219,11 @@ pub unsafe fn l_randomizepivot() -> u32 {
         let mut buffer: [u32; 4] = [0; 4];
         let mut i: u32;
         let mut rnd: u32 = 0;
-        std::ptr::copy_nonoverlapping(&c as *const i64 as *const u8, buffer.as_mut_ptr() as *mut u8, size_of::<i64>());
+        std::ptr::copy_nonoverlapping(
+            &c as *const i64 as *const u8,
+            buffer.as_mut_ptr() as *mut u8,
+            size_of::<i64>(),
+        );
         std::ptr::copy_nonoverlapping(
             &t as *const i64 as *const u8,
             buffer.as_mut_ptr().add(size_of::<i64>() / size_of::<u32>()) as *mut u8,
@@ -289,7 +296,9 @@ pub unsafe fn partition(state: *mut State, low: u32, high: u32) -> u32 {
 }
 pub fn choose_pivot(low: u32, high: u32, rnd: u32) -> u32 {
     let r4: u32 = (high - low) / 4;
-    let p: u32 = rnd.wrapping_rem(r4.wrapping_mul(2_u32)).wrapping_add(low.wrapping_add(r4));
+    let p: u32 = rnd
+        .wrapping_rem(r4.wrapping_mul(2_u32))
+        .wrapping_add(low.wrapping_add(r4));
     p
 }
 pub unsafe fn auxsort(state: *mut State, mut low: u32, mut high: u32, mut rnd: u32) {
@@ -357,10 +366,10 @@ pub unsafe fn table_sort(state: *mut State) -> i32 {
                 lual_argerror(state, 1, c"array too big".as_ptr());
             }
             match lua_type(state, 2) {
-                | None | Some(TagType::Nil) => {},
-                | _ => {
+                None | Some(TagType::Nil) => {}
+                _ => {
                     (*state).lual_checktype(2, TagType::Closure);
-                },
+                }
             }
             lua_settop(state, 2);
             auxsort(state, 1_u32, n as u32, 0);
@@ -381,7 +390,9 @@ pub unsafe fn table_create(state: *mut State) -> i32 {
             0;
         }
         (*state).lua_createtable();
-        let table = (*(*state).interpreter_top.stkidrel_pointer.sub(1)).as_table().unwrap();
+        let table = (*(*state).interpreter_top.stkidrel_pointer.sub(1))
+            .as_table()
+            .unwrap();
         if sizeseq > 0 || sizerest > 0 {
             luah_resize(state, table, sizeseq as usize, sizerest as usize);
         }

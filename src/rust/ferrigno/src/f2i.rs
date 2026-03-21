@@ -38,7 +38,11 @@ impl F2I {
                 obj = &mut tvalue;
             }
             if let Some(n) = (*obj).as_number() {
-                if (*self).convert_f64_i64(n, result) { 1 } else { 0 }
+                if (*self).convert_f64_i64(n, result) {
+                    1
+                } else {
+                    0
+                }
             } else if let Some(i) = (*obj).as_integer() {
                 *result = i;
                 1
@@ -54,7 +58,11 @@ pub unsafe fn leintfloat(i: i64, number: f64) -> bool {
             i as f64 <= number
         } else {
             let mut fi: i64 = 0;
-            if F2I::Floor.convert_f64_i64(number, &mut fi) { i <= fi } else { number > 0.0 }
+            if F2I::Floor.convert_f64_i64(number, &mut fi) {
+                i <= fi
+            } else {
+                number > 0.0
+            }
         }
     }
 }
@@ -64,7 +72,11 @@ pub unsafe fn ltfloatint(number: f64, i: i64) -> bool {
             number < i as f64
         } else {
             let mut fi: i64 = 0;
-            if F2I::Floor.convert_f64_i64(number, &mut fi) { fi < i } else { number < 0.0 }
+            if F2I::Floor.convert_f64_i64(number, &mut fi) {
+                fi < i
+            } else {
+                number < 0.0
+            }
         }
     }
 }
@@ -166,7 +178,12 @@ pub unsafe fn luav_mod(state: *mut State, m: i64, n: i64) -> i64 {
 }
 pub unsafe fn luav_modf(mut _state: *mut State, m: f64, n: f64) -> f64 {
     let mut r: f64 = m % n;
-    if if r > 0.0 { (n < 0.0) as i32 } else { (r < 0.0 && n > 0.0) as i32 } != 0 {
+    if if r > 0.0 {
+        (n < 0.0) as i32
+    } else {
+        (r < 0.0 && n > 0.0) as i32
+    } != 0
+    {
         r += n;
     }
     r
@@ -214,7 +231,11 @@ pub unsafe fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) -> *const i8 
             }
         }
         s = s.add(cstr_span(s, WHITESPACE.as_ptr()));
-        *pn = (if is_negative != 0 { (0usize).wrapping_sub(n) } else { n }) as i64;
+        *pn = (if is_negative != 0 {
+            (0usize).wrapping_sub(n)
+        } else {
+            n
+        }) as i64;
         s
     }
 }

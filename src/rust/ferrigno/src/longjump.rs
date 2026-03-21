@@ -17,6 +17,8 @@ impl Default for LongJump {
 
 impl LongJump {
     pub fn new() -> Self {
-        LongJump { longjump_previous: null_mut() }
+        LongJump {
+            longjump_previous: null_mut(),
+        }
     }
 }

@@ -7,7 +7,10 @@ fn run_ferrigno(args: &[&str]) -> std::process::Output {
         let profile_dir = deps_dir.parent().expect("no profile dir");
         profile_dir.join("ferrigno").to_string_lossy().into_owned()
     });
-    Command::new(bin).args(args).output().expect("failed to run ferrigno")
+    Command::new(bin)
+        .args(args)
+        .output()
+        .expect("failed to run ferrigno")
 }
 
 fn run_ok(code: &str) -> String {
@@ -37,9 +40,7 @@ fn dis_dis_lua_function() {
 
 #[test]
 fn dis_code_returns_string() {
-    let out = run_ok(
-        "local dis = require('dis'); local function f(x) return x*x end; print(type(dis.code(f)))",
-    );
+    let out = run_ok("local dis = require('dis'); local function f(x) return x*x end; print(type(dis.code(f)))");
     assert!(out.trim() == "string");
 }
 
@@ -158,9 +159,7 @@ fn functools_any_all() {
 
 #[test]
 fn functools_identity() {
-    let out = run_ok(
-        "local F = require('functools'); print(F.identity(1, 'a', true))",
-    );
+    let out = run_ok("local F = require('functools'); print(F.identity(1, 'a', true))");
     assert!(out.trim() == "1\ta\ttrue");
 }
 
@@ -320,14 +319,12 @@ fn syntax_brace_nested() {
 
 #[test]
 fn syntax_brace_disabled() {
-    let output = Command::new(
-        std::env::var("CARGO_BIN_EXE_ferrigno").unwrap_or_else(|_| {
-            let test_exe = std::env::current_exe().expect("cannot locate test binary");
-            let deps_dir = test_exe.parent().expect("no parent dir");
-            let profile_dir = deps_dir.parent().expect("no profile dir");
-            profile_dir.join("ferrigno").to_string_lossy().into_owned()
-        }),
-    )
+    let output = Command::new(std::env::var("CARGO_BIN_EXE_ferrigno").unwrap_or_else(|_| {
+        let test_exe = std::env::current_exe().expect("cannot locate test binary");
+        let deps_dir = test_exe.parent().expect("no parent dir");
+        let profile_dir = deps_dir.parent().expect("no profile dir");
+        profile_dir.join("ferrigno").to_string_lossy().into_owned()
+    }))
     .env("FERRIGNO_EXTENSION_BRACE", "false")
     .args(&["-e", "local function f(x) { return x }"])
     .output()
@@ -373,14 +370,12 @@ fn syntax_fstring_nested_quotes() {
 
 #[test]
 fn syntax_fstring_disabled() {
-    let output = Command::new(
-        std::env::var("CARGO_BIN_EXE_ferrigno").unwrap_or_else(|_| {
-            let test_exe = std::env::current_exe().expect("cannot locate test binary");
-            let deps_dir = test_exe.parent().expect("no parent dir");
-            let profile_dir = deps_dir.parent().expect("no profile dir");
-            profile_dir.join("ferrigno").to_string_lossy().into_owned()
-        }),
-    )
+    let output = Command::new(std::env::var("CARGO_BIN_EXE_ferrigno").unwrap_or_else(|_| {
+        let test_exe = std::env::current_exe().expect("cannot locate test binary");
+        let deps_dir = test_exe.parent().expect("no parent dir");
+        let profile_dir = deps_dir.parent().expect("no profile dir");
+        profile_dir.join("ferrigno").to_string_lossy().into_owned()
+    }))
     .env("FERRIGNO_EXTENSION_FSTRING", "false")
     .args(&["-e", r#"print($"hello")"#])
     .output()
@@ -411,14 +406,12 @@ fn syntax_backtick_failure() {
 
 #[test]
 fn syntax_backtick_disabled() {
-    let output = Command::new(
-        std::env::var("CARGO_BIN_EXE_ferrigno").unwrap_or_else(|_| {
-            let test_exe = std::env::current_exe().expect("cannot locate test binary");
-            let deps_dir = test_exe.parent().expect("no parent dir");
-            let profile_dir = deps_dir.parent().expect("no profile dir");
-            profile_dir.join("ferrigno").to_string_lossy().into_owned()
-        }),
-    )
+    let output = Command::new(std::env::var("CARGO_BIN_EXE_ferrigno").unwrap_or_else(|_| {
+        let test_exe = std::env::current_exe().expect("cannot locate test binary");
+        let deps_dir = test_exe.parent().expect("no parent dir");
+        let profile_dir = deps_dir.parent().expect("no profile dir");
+        profile_dir.join("ferrigno").to_string_lossy().into_owned()
+    }))
     .env("FERRIGNO_EXTENSION_BACKTICK", "false")
     .args(&["-e", "`echo hello`"])
     .output()

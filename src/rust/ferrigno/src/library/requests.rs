@@ -1,4 +1,4 @@
-use crate::library::json::{JsonParser, json_null_ptr};
+use crate::library::json::{json_null_ptr, JsonParser};
 use crate::registeredfunction::*;
 use crate::state::*;
 use crate::tagtype::*;
@@ -56,7 +56,10 @@ unsafe extern "C" fn write_cb(data: *const std::ffi::c_char, size: usize, nmemb:
 }
 
 unsafe extern "C" fn header_cb(
-    data: *const std::ffi::c_char, size: usize, nmemb: usize, user_data: *mut std::ffi::c_void,
+    data: *const std::ffi::c_char,
+    size: usize,
+    nmemb: usize,
+    user_data: *mut std::ffi::c_void,
 ) -> usize {
     unsafe {
         let buf = user_data as *mut Vec<u8>;
@@ -81,7 +84,11 @@ fn percent_encode_param(input: &[u8]) -> Vec<u8> {
 }
 
 fn hex_nibble(n: u8) -> u8 {
-    if n < 10 { b'0' + n } else { b'A' + n - 10 }
+    if n < 10 {
+        b'0' + n
+    } else {
+        b'A' + n - 10
+    }
 }
 
 fn strip_crlf(s: &[u8]) -> &[u8] {
@@ -93,9 +100,20 @@ fn strip_crlf(s: &[u8]) -> &[u8] {
 }
 
 fn trim_bytes(s: &[u8]) -> &[u8] {
-    let start = s.iter().position(|&b| b != b' ' && b != b'\t').unwrap_or(s.len());
-    let end = s.iter().rposition(|&b| b != b' ' && b != b'\t').map(|i| i + 1).unwrap_or(0);
-    if start >= end { &[] } else { &s[start..end] }
+    let start = s
+        .iter()
+        .position(|&b| b != b' ' && b != b'\t')
+        .unwrap_or(s.len());
+    let end = s
+        .iter()
+        .rposition(|&b| b != b' ' && b != b'\t')
+        .map(|i| i + 1)
+        .unwrap_or(0);
+    if start >= end {
+        &[]
+    } else {
+        &s[start..end]
+    }
 }
 
 fn memchr_local(s: &[u8], c: u8) -> Option<usize> {
@@ -107,7 +125,11 @@ unsafe fn build_query_string(state: *mut State, idx: i32) -> Vec<u8> {
     unsafe {
         let mut out: Vec<u8> = Vec::new();
         (*state).push_nil();
-        let abs = if idx < 0 { (*state).get_top() + idx } else { idx };
+        let abs = if idx < 0 {
+            (*state).get_top() + idx
+        } else {
+            idx
+        };
         while lua_next(state, abs) != 0 {
             // Capture absolute positions before any lual_tolstring calls shift things
             let abs_key = (*state).get_top() - 1;
@@ -120,11 +142,17 @@ unsafe fn build_query_string(state: *mut State, idx: i32) -> Vec<u8> {
             let mut vlen = 0usize;
             let vptr = lual_tolstring(state, abs_val, &mut vlen);
             if !kptr.is_null() {
-                out.extend_from_slice(&percent_encode_param(std::slice::from_raw_parts(kptr as *const u8, klen)));
+                out.extend_from_slice(&percent_encode_param(std::slice::from_raw_parts(
+                    kptr as *const u8,
+                    klen,
+                )));
             }
             out.push(b'=');
             if !vptr.is_null() {
-                out.extend_from_slice(&percent_encode_param(std::slice::from_raw_parts(vptr as *const u8, vlen)));
+                out.extend_from_slice(&percent_encode_param(std::slice::from_raw_parts(
+                    vptr as *const u8,
+                    vlen,
+                )));
             }
             lua_settop(state, abs_key); // restore to just key for next lua_next
         }
@@ -137,7 +165,11 @@ unsafe fn build_header_slist(state: *mut State, idx: i32) -> *mut std::ffi::c_vo
     unsafe {
         let mut list: *mut std::ffi::c_void = null_mut();
         (*state).push_nil();
-        let abs = if idx < 0 { (*state).get_top() + idx } else { idx };
+        let abs = if idx < 0 {
+            (*state).get_top() + idx
+        } else {
+            idx
+        };
         while lua_next(state, abs) != 0 {
             let abs_key = (*state).get_top() - 1;
             let abs_val = (*state).get_top();
@@ -166,7 +198,11 @@ unsafe fn build_cookie_string(state: *mut State, idx: i32) -> Vec<u8> {
     unsafe {
         let mut out: Vec<u8> = Vec::new();
         (*state).push_nil();
-        let abs = if idx < 0 { (*state).get_top() + idx } else { idx };
+        let abs = if idx < 0 {
+            (*state).get_top() + idx
+        } else {
+            idx
+        };
         while lua_next(state, abs) != 0 {
             let abs_key = (*state).get_top() - 1;
             let abs_val = (*state).get_top();
@@ -270,7 +306,11 @@ unsafe fn do_request(
         }
 
         full_url.push(0); // null-terminate
-        curl_easy_setopt(curl, CURLOPT_URL, full_url.as_ptr() as *const std::ffi::c_char);
+        curl_easy_setopt(
+            curl,
+            CURLOPT_URL,
+            full_url.as_ptr() as *const std::ffi::c_char,
+        );
 
         // ── User-Agent ───────────────────────────────────────────────────────
 
@@ -280,10 +320,26 @@ unsafe fn do_request(
 
         let mut body_buf: Vec<u8> = Vec::new();
         let mut hdr_buf: Vec<u8> = Vec::new();
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb as *mut std::ffi::c_void);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &mut body_buf as *mut Vec<u8> as *mut std::ffi::c_void);
-        curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_cb as *mut std::ffi::c_void);
-        curl_easy_setopt(curl, CURLOPT_HEADERDATA, &mut hdr_buf as *mut Vec<u8> as *mut std::ffi::c_void);
+        curl_easy_setopt(
+            curl,
+            CURLOPT_WRITEFUNCTION,
+            write_cb as *mut std::ffi::c_void,
+        );
+        curl_easy_setopt(
+            curl,
+            CURLOPT_WRITEDATA,
+            &mut body_buf as *mut Vec<u8> as *mut std::ffi::c_void,
+        );
+        curl_easy_setopt(
+            curl,
+            CURLOPT_HEADERFUNCTION,
+            header_cb as *mut std::ffi::c_void,
+        );
+        curl_easy_setopt(
+            curl,
+            CURLOPT_HEADERDATA,
+            &mut hdr_buf as *mut Vec<u8> as *mut std::ffi::c_void,
+        );
 
         // ── Follow redirects (default on, opts.allow_redirects overrides) ────
 
@@ -315,20 +371,20 @@ unsafe fn do_request(
             // data (raw string body or form-encoded table)
             lua_getfield(state, opts_idx, c"data".as_ptr());
             match lua_type(state, -1) {
-                | Some(TagType::String) => {
+                Some(TagType::String) => {
                     let mut dlen = 0usize;
                     let dptr = lua_tolstring(state, -1, &mut dlen);
                     body_data = Some(std::slice::from_raw_parts(dptr as *const u8, dlen).to_vec());
-                },
-                | Some(TagType::Table) => {
+                }
+                Some(TagType::Table) => {
                     // Form-encode the table
                     let qs = build_query_string(state, -1);
                     body_data = Some(qs);
                     // Add Content-Type if not already set
                     let ct = b"Content-Type: application/x-www-form-urlencoded\0";
                     extra_headers = curl_slist_append(extra_headers, ct.as_ptr() as *const i8);
-                },
-                | _ => {},
+                }
+                _ => {}
             }
             lua_settop(state, -2);
 
@@ -392,7 +448,11 @@ unsafe fn do_request(
 
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, follow);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ssl_verify);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, if ssl_verify != 0 { 2i64 } else { 0i64 });
+        curl_easy_setopt(
+            curl,
+            CURLOPT_SSL_VERIFYHOST,
+            if ssl_verify != 0 { 2i64 } else { 0i64 },
+        );
 
         if timeout_secs > 0 {
             curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout_secs);
@@ -400,11 +460,19 @@ unsafe fn do_request(
         }
 
         if !userpwd_buf.is_empty() {
-            curl_easy_setopt(curl, CURLOPT_USERPWD, userpwd_buf.as_ptr() as *const std::ffi::c_char);
+            curl_easy_setopt(
+                curl,
+                CURLOPT_USERPWD,
+                userpwd_buf.as_ptr() as *const std::ffi::c_char,
+            );
         }
 
         if !cookie_buf.is_empty() {
-            curl_easy_setopt(curl, CURLOPT_COOKIE, cookie_buf.as_ptr() as *const std::ffi::c_char);
+            curl_easy_setopt(
+                curl,
+                CURLOPT_COOKIE,
+                cookie_buf.as_ptr() as *const std::ffi::c_char,
+            );
         }
 
         if !extra_headers.is_null() {
@@ -415,32 +483,44 @@ unsafe fn do_request(
 
         let method_upper: Vec<u8> = method.iter().map(|b| b.to_ascii_uppercase()).collect();
         match method_upper.as_slice() {
-            | b"GET" => {
+            b"GET" => {
                 // Default — nothing extra needed
-            },
-            | b"HEAD" => {
+            }
+            b"HEAD" => {
                 curl_easy_setopt(curl, CURLOPT_NOBODY, 1i64);
-            },
-            | b"POST" => {
+            }
+            b"POST" => {
                 curl_easy_setopt(curl, CURLOPT_POST, 1i64);
                 if let Some(ref data) = body_data {
-                    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.as_ptr() as *const std::ffi::c_char);
+                    curl_easy_setopt(
+                        curl,
+                        CURLOPT_POSTFIELDS,
+                        data.as_ptr() as *const std::ffi::c_char,
+                    );
                     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, data.len() as i64);
                 } else {
                     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, c"".as_ptr());
                     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, 0i64);
                 }
-            },
-            | _ => {
+            }
+            _ => {
                 // PUT, PATCH, DELETE, etc.
                 let mut understudy = method_upper.clone();
                 understudy.push(0);
-                curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, understudy.as_ptr() as *const std::ffi::c_char);
+                curl_easy_setopt(
+                    curl,
+                    CURLOPT_CUSTOMREQUEST,
+                    understudy.as_ptr() as *const std::ffi::c_char,
+                );
                 if let Some(ref data) = body_data {
-                    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.as_ptr() as *const std::ffi::c_char);
+                    curl_easy_setopt(
+                        curl,
+                        CURLOPT_POSTFIELDS,
+                        data.as_ptr() as *const std::ffi::c_char,
+                    );
                     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, data.len() as i64);
                 }
-            },
+            }
         }
 
         // ── Perform ───────────────────────────────────────────────────────────
@@ -465,7 +545,9 @@ unsafe fn do_request(
 
         let mut effective_url_ptr: *const std::ffi::c_char = null();
         curl_easy_getinfo(
-            curl, CURLINFO_EFFECTIVE_URL, &mut effective_url_ptr as *mut *const std::ffi::c_char,
+            curl,
+            CURLINFO_EFFECTIVE_URL,
+            &mut effective_url_ptr as *mut *const std::ffi::c_char,
         );
 
         // Capture effective URL before cleanup
@@ -525,12 +607,20 @@ unsafe fn push_response_table(state: *mut State, status: i64, body: &[u8], raw_h
 
         // json() method
         lua_pushlstring(state, b"json".as_ptr() as *const i8, 4);
-        lua_pushcclosure(state, Some(response_json as unsafe fn(*mut State) -> i32), 0);
+        lua_pushcclosure(
+            state,
+            Some(response_json as unsafe fn(*mut State) -> i32),
+            0,
+        );
         lua_rawset(state, -3);
 
         // raise_for_status() method
         lua_pushlstring(state, b"raise_for_status".as_ptr() as *const i8, 16);
-        lua_pushcclosure(state, Some(response_raise_for_status as unsafe fn(*mut State) -> i32), 0);
+        lua_pushcclosure(
+            state,
+            Some(response_raise_for_status as unsafe fn(*mut State) -> i32),
+            0,
+        );
         lua_rawset(state, -3);
     }
 }
@@ -555,12 +645,12 @@ pub unsafe fn response_json(state: *mut State) -> i32 {
         let mut parser = JsonParser::new(&input);
 
         match parser.parse_value(state) {
-            | Ok(()) => 1,
-            | Err(msg) => {
+            Ok(()) => 1,
+            Err(msg) => {
                 lua_settop(state, saved_top);
                 let full = format!("response:json(): {}\0", msg);
                 lual_error(state, full.as_ptr() as *const i8, &[])
-            },
+            }
         }
     }
 }
@@ -594,7 +684,11 @@ pub unsafe fn requests_request(state: *mut State) -> i32 {
         let uptr = lual_checklstring(state, 2, &mut ulen);
         let url = std::slice::from_raw_parts(uptr as *const u8, ulen);
 
-        let opts_idx = if lua_type(state, 3) == Some(TagType::Table) { 3 } else { 0 };
+        let opts_idx = if lua_type(state, 3) == Some(TagType::Table) {
+            3
+        } else {
+            0
+        };
 
         do_request(state, method, url, opts_idx)
     }
@@ -606,7 +700,11 @@ pub unsafe fn requests_get(state: *mut State) -> i32 {
         let mut ulen = 0usize;
         let uptr = lual_checklstring(state, 1, &mut ulen);
         let url = std::slice::from_raw_parts(uptr as *const u8, ulen);
-        let opts_idx = if lua_type(state, 2) == Some(TagType::Table) { 2 } else { 0 };
+        let opts_idx = if lua_type(state, 2) == Some(TagType::Table) {
+            2
+        } else {
+            0
+        };
         do_request(state, b"GET", url, opts_idx)
     }
 }
@@ -617,7 +715,11 @@ pub unsafe fn requests_post(state: *mut State) -> i32 {
         let mut ulen = 0usize;
         let uptr = lual_checklstring(state, 1, &mut ulen);
         let url = std::slice::from_raw_parts(uptr as *const u8, ulen);
-        let opts_idx = if lua_type(state, 2) == Some(TagType::Table) { 2 } else { 0 };
+        let opts_idx = if lua_type(state, 2) == Some(TagType::Table) {
+            2
+        } else {
+            0
+        };
         do_request(state, b"POST", url, opts_idx)
     }
 }
@@ -628,7 +730,11 @@ pub unsafe fn requests_put(state: *mut State) -> i32 {
         let mut ulen = 0usize;
         let uptr = lual_checklstring(state, 1, &mut ulen);
         let url = std::slice::from_raw_parts(uptr as *const u8, ulen);
-        let opts_idx = if lua_type(state, 2) == Some(TagType::Table) { 2 } else { 0 };
+        let opts_idx = if lua_type(state, 2) == Some(TagType::Table) {
+            2
+        } else {
+            0
+        };
         do_request(state, b"PUT", url, opts_idx)
     }
 }
@@ -639,7 +745,11 @@ pub unsafe fn requests_delete(state: *mut State) -> i32 {
         let mut ulen = 0usize;
         let uptr = lual_checklstring(state, 1, &mut ulen);
         let url = std::slice::from_raw_parts(uptr as *const u8, ulen);
-        let opts_idx = if lua_type(state, 2) == Some(TagType::Table) { 2 } else { 0 };
+        let opts_idx = if lua_type(state, 2) == Some(TagType::Table) {
+            2
+        } else {
+            0
+        };
         do_request(state, b"DELETE", url, opts_idx)
     }
 }
@@ -650,7 +760,11 @@ pub unsafe fn requests_patch(state: *mut State) -> i32 {
         let mut ulen = 0usize;
         let uptr = lual_checklstring(state, 1, &mut ulen);
         let url = std::slice::from_raw_parts(uptr as *const u8, ulen);
-        let opts_idx = if lua_type(state, 2) == Some(TagType::Table) { 2 } else { 0 };
+        let opts_idx = if lua_type(state, 2) == Some(TagType::Table) {
+            2
+        } else {
+            0
+        };
         do_request(state, b"PATCH", url, opts_idx)
     }
 }
@@ -661,7 +775,11 @@ pub unsafe fn requests_head(state: *mut State) -> i32 {
         let mut ulen = 0usize;
         let uptr = lual_checklstring(state, 1, &mut ulen);
         let url = std::slice::from_raw_parts(uptr as *const u8, ulen);
-        let opts_idx = if lua_type(state, 2) == Some(TagType::Table) { 2 } else { 0 };
+        let opts_idx = if lua_type(state, 2) == Some(TagType::Table) {
+            2
+        } else {
+            0
+        };
         do_request(state, b"HEAD", url, opts_idx)
     }
 }
@@ -705,7 +823,12 @@ pub unsafe fn luaopen_requests(state: *mut State) -> i32 {
         let _ = json_null_ptr(); // ensure sentinel is initialized
 
         (*state).lua_createtable();
-        lual_setfuncs(state, REQUESTS_FUNCTIONS.as_ptr(), REQUESTS_FUNCTIONS.len(), 0);
+        lual_setfuncs(
+            state,
+            REQUESTS_FUNCTIONS.as_ptr(),
+            REQUESTS_FUNCTIONS.len(),
+            0,
+        );
         1
     }
 }

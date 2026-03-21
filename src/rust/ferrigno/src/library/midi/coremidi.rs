@@ -17,20 +17,24 @@ type ByteCount = u64;
 #[link(name = "CoreMIDI", kind = "framework")]
 unsafe extern "C" {
     fn MIDIClientCreate(
-        name: *const std::ffi::c_void, notify_proc: *mut std::ffi::c_void, notify_ref_con: *mut std::ffi::c_void,
+        name: *const std::ffi::c_void,
+        notify_proc: *mut std::ffi::c_void,
+        notify_ref_con: *mut std::ffi::c_void,
         out_client: *mut MidiClientRef,
     ) -> OsStatus;
 
     fn MIDIOutputPortCreate(client: MidiClientRef, port_name: *const std::ffi::c_void, out_port: *mut MidiPortRef) -> OsStatus;
 
     fn MIDIInputPortCreate(
-        client: MidiClientRef, port_name: *const std::ffi::c_void,
+        client: MidiClientRef,
+        port_name: *const std::ffi::c_void,
         read_proc: unsafe extern "C" fn(
             pktlist: *const std::ffi::c_void,
             read_proc_ref: *mut std::ffi::c_void,
             src_conn_ref: *mut std::ffi::c_void,
         ),
-        ref_con: *mut std::ffi::c_void, out_port: *mut MidiPortRef,
+        ref_con: *mut std::ffi::c_void,
+        out_port: *mut MidiPortRef,
     ) -> OsStatus;
 
     fn MIDIPortConnectSource(port: MidiPortRef, source: MidiEndpointRef, conn_ref_con: *mut std::ffi::c_void) -> OsStatus;
@@ -46,7 +50,9 @@ unsafe extern "C" {
     fn MIDIGetDestination(dest_index0: ItemCount) -> MidiEndpointRef;
 
     fn MIDIObjectGetStringProperty(
-        obj: MidiObjectRef, prop_id: *const std::ffi::c_void, str_out: *mut *mut std::ffi::c_void,
+        obj: MidiObjectRef,
+        prop_id: *const std::ffi::c_void,
+        str_out: *mut *mut std::ffi::c_void,
     ) -> OsStatus;
 
     fn MIDISend(port: MidiPortRef, dest: MidiEndpointRef, pktlist: *const std::ffi::c_void) -> OsStatus;
@@ -54,8 +60,12 @@ unsafe extern "C" {
     fn MIDIPacketListInit(pktlist: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
 
     fn MIDIPacketListAdd(
-        pktlist: *mut std::ffi::c_void, list_size: ByteCount, cur_packet: *mut std::ffi::c_void, time: MidiTimeStamp,
-        n_data: ByteCount, data: *const u8,
+        pktlist: *mut std::ffi::c_void,
+        list_size: ByteCount,
+        cur_packet: *mut std::ffi::c_void,
+        time: MidiTimeStamp,
+        n_data: ByteCount,
+        data: *const u8,
     ) -> *mut std::ffi::c_void;
 
     static kMIDIPropertyName: *const std::ffi::c_void;
@@ -68,11 +78,16 @@ const CF_STRING_ENCODING_UTF8: u32 = 0x08000100;
 #[link(name = "CoreFoundation", kind = "framework")]
 unsafe extern "C" {
     fn CFStringCreateWithCString(
-        alloc: *const std::ffi::c_void, c_str: *const std::ffi::c_char, encoding: u32,
+        alloc: *const std::ffi::c_void,
+        c_str: *const std::ffi::c_char,
+        encoding: u32,
     ) -> *mut std::ffi::c_void;
 
     fn CFStringGetCString(
-        the_string: *const std::ffi::c_void, buffer: *mut std::ffi::c_char, buffer_size: i64, encoding: u32,
+        the_string: *const std::ffi::c_void,
+        buffer: *mut std::ffi::c_char,
+        buffer_size: i64,
+        encoding: u32,
     ) -> i32;
 
     fn CFRelease(cf: *const std::ffi::c_void);
@@ -84,7 +99,11 @@ unsafe fn cf_str_from_bytes(s: &[u8]) -> *mut std::ffi::c_void {
     unsafe {
         let mut buf = s.to_vec();
         buf.push(0);
-        CFStringCreateWithCString(null(), buf.as_ptr() as *const std::ffi::c_char, CF_STRING_ENCODING_UTF8)
+        CFStringCreateWithCString(
+            null(),
+            buf.as_ptr() as *const std::ffi::c_char,
+            CF_STRING_ENCODING_UTF8,
+        )
     }
 }
 
@@ -94,7 +113,12 @@ unsafe fn cf_str_to_string(cfstr: *const std::ffi::c_void) -> String {
             return String::new();
         }
         let mut buf = vec![0u8; 512];
-        let ok = CFStringGetCString(cfstr, buf.as_mut_ptr() as *mut std::ffi::c_char, 512, CF_STRING_ENCODING_UTF8);
+        let ok = CFStringGetCString(
+            cfstr,
+            buf.as_mut_ptr() as *mut std::ffi::c_char,
+            512,
+            CF_STRING_ENCODING_UTF8,
+        );
         if ok != 0 {
             let end = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
             String::from_utf8_lossy(&buf[..end]).into_owned()
@@ -143,7 +167,9 @@ unsafe fn get_or_create_client() -> Result<MidiClientRef, String> {
 // ─── CoreMIDI read callback ──────────────────────────────────────────────────
 
 unsafe extern "C" fn midi_read_proc(
-    pktlist: *const std::ffi::c_void, refcon: *mut std::ffi::c_void, _src_conn: *mut std::ffi::c_void,
+    pktlist: *const std::ffi::c_void,
+    refcon: *mut std::ffi::c_void,
+    _src_conn: *mut std::ffi::c_void,
 ) {
     unsafe {
         let arc = Arc::from_raw(refcon as *const Mutex<VecDeque<MidiMsg>>);
@@ -183,7 +209,14 @@ unsafe fn send_bytes(port: MidiPortRef, dest: MidiEndpointRef, data: &[u8]) -> O
         let mut buf = vec![0u8; SEND_BUF];
         let pktlist = buf.as_mut_ptr() as *mut std::ffi::c_void;
         let cur = MIDIPacketListInit(pktlist);
-        let cur = MIDIPacketListAdd(pktlist, SEND_BUF as ByteCount, cur, 0, data.len() as ByteCount, data.as_ptr());
+        let cur = MIDIPacketListAdd(
+            pktlist,
+            SEND_BUF as ByteCount,
+            cur,
+            0,
+            data.len() as ByteCount,
+            data.as_ptr(),
+        );
         if cur.is_null() {
             return -2;
         }
@@ -205,7 +238,11 @@ impl MidiOutputPort for CoreMidiOutput {
             return Err("port closed".into());
         }
         let rc = unsafe { send_bytes(self.port, self.endpoint, data) };
-        if rc != 0 { Err(format!("MIDISend failed: {}", rc)) } else { Ok(()) }
+        if rc != 0 {
+            Err(format!("MIDISend failed: {}", rc))
+        } else {
+            Ok(())
+        }
     }
 
     fn close(&mut self) {
@@ -248,7 +285,9 @@ impl MidiInputPort for CoreMidiInput {
             unsafe {
                 MIDIPortDisconnectSource(self.port, self.endpoint);
                 MIDIPortDispose(self.port);
-                drop(Arc::from_raw(self.refcon as *const Mutex<VecDeque<MidiMsg>>));
+                drop(Arc::from_raw(
+                    self.refcon as *const Mutex<VecDeque<MidiMsg>>,
+                ));
             }
             self.closed = true;
         }
@@ -270,13 +309,13 @@ impl CoreMidiBackend {
         unsafe {
             let n = MIDIGetNumberOfDestinations();
             match sel {
-                | EndpointSelector::Index(idx) => {
+                EndpointSelector::Index(idx) => {
                     if *idx < 1 || *idx as u64 > n {
                         return None;
                     }
                     Some(MIDIGetDestination((*idx - 1) as ItemCount))
-                },
-                | EndpointSelector::Name(want) => {
+                }
+                EndpointSelector::Name(want) => {
                     for i in 0..n {
                         let ep = MIDIGetDestination(i);
                         if endpoint_name(ep) == *want {
@@ -284,7 +323,7 @@ impl CoreMidiBackend {
                         }
                     }
                     None
-                },
+                }
             }
         }
     }
@@ -293,13 +332,13 @@ impl CoreMidiBackend {
         unsafe {
             let n = MIDIGetNumberOfSources();
             match sel {
-                | EndpointSelector::Index(idx) => {
+                EndpointSelector::Index(idx) => {
                     if *idx < 1 || *idx as u64 > n {
                         return None;
                     }
                     Some(MIDIGetSource((*idx - 1) as ItemCount))
-                },
-                | EndpointSelector::Name(want) => {
+                }
+                EndpointSelector::Name(want) => {
                     for i in 0..n {
                         let ep = MIDIGetSource(i);
                         if endpoint_name(ep) == *want {
@@ -307,7 +346,7 @@ impl CoreMidiBackend {
                         }
                     }
                     None
-                },
+                }
             }
         }
     }
@@ -321,7 +360,10 @@ impl MidiBackend for CoreMidiBackend {
         unsafe {
             let n = MIDIGetNumberOfSources();
             (0..n)
-                .map(|i| MidiEndpointInfo { name: endpoint_name(MIDIGetSource(i)), index: (i + 1) as usize })
+                .map(|i| MidiEndpointInfo {
+                    name: endpoint_name(MIDIGetSource(i)),
+                    index: (i + 1) as usize,
+                })
                 .collect()
         }
     }
@@ -330,7 +372,10 @@ impl MidiBackend for CoreMidiBackend {
         unsafe {
             let n = MIDIGetNumberOfDestinations();
             (0..n)
-                .map(|i| MidiEndpointInfo { name: endpoint_name(MIDIGetDestination(i)), index: (i + 1) as usize })
+                .map(|i| MidiEndpointInfo {
+                    name: endpoint_name(MIDIGetDestination(i)),
+                    index: (i + 1) as usize,
+                })
                 .collect()
         }
     }
@@ -348,7 +393,11 @@ impl MidiBackend for CoreMidiBackend {
             if rc != 0 {
                 return Err(format!("MIDIOutputPortCreate failed: {}", rc));
             }
-            Ok(CoreMidiOutput { port, endpoint, closed: false })
+            Ok(CoreMidiOutput {
+                port,
+                endpoint,
+                closed: false,
+            })
         }
     }
 
@@ -378,7 +427,13 @@ impl MidiBackend for CoreMidiBackend {
                 return Err(format!("MIDIPortConnectSource failed: {}", rc2));
             }
 
-            Ok(CoreMidiInput { port, endpoint, buf, refcon, closed: false })
+            Ok(CoreMidiInput {
+                port,
+                endpoint,
+                buf,
+                refcon,
+                closed: false,
+            })
         }
     }
 }

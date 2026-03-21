@@ -14,17 +14,26 @@ const UPVALUE1: i32 = LUA_REGISTRYINDEX - 1;
 #[link(name = "sqlite3")]
 unsafe extern "C" {
     fn sqlite3_open_v2(
-        filename: *const std::ffi::c_char, ppdb: *mut *mut std::ffi::c_void, flags: std::ffi::c_int, zvfs: *const std::ffi::c_char,
+        filename: *const std::ffi::c_char,
+        ppdb: *mut *mut std::ffi::c_void,
+        flags: std::ffi::c_int,
+        zvfs: *const std::ffi::c_char,
     ) -> std::ffi::c_int;
     fn sqlite3_close(db: *mut std::ffi::c_void) -> std::ffi::c_int;
     fn sqlite3_errmsg(db: *mut std::ffi::c_void) -> *const std::ffi::c_char;
     fn sqlite3_exec(
-        db: *mut std::ffi::c_void, sql: *const std::ffi::c_char, callback: *mut std::ffi::c_void, arg: *mut std::ffi::c_void,
+        db: *mut std::ffi::c_void,
+        sql: *const std::ffi::c_char,
+        callback: *mut std::ffi::c_void,
+        arg: *mut std::ffi::c_void,
         errmsg: *mut *mut std::ffi::c_char,
     ) -> std::ffi::c_int;
     fn sqlite3_free(p: *mut std::ffi::c_void);
     fn sqlite3_prepare_v2(
-        db: *mut std::ffi::c_void, zsql: *const std::ffi::c_char, nbyte: std::ffi::c_int, ppstmt: *mut *mut std::ffi::c_void,
+        db: *mut std::ffi::c_void,
+        zsql: *const std::ffi::c_char,
+        nbyte: std::ffi::c_int,
+        ppstmt: *mut *mut std::ffi::c_void,
         pztail: *mut *const std::ffi::c_char,
     ) -> std::ffi::c_int;
     fn sqlite3_step(pstmt: *mut std::ffi::c_void) -> std::ffi::c_int;
@@ -41,7 +50,10 @@ unsafe extern "C" {
     fn sqlite3_bind_int64(pstmt: *mut std::ffi::c_void, i: std::ffi::c_int, v: i64) -> std::ffi::c_int;
     fn sqlite3_bind_double(pstmt: *mut std::ffi::c_void, i: std::ffi::c_int, v: f64) -> std::ffi::c_int;
     fn sqlite3_bind_text(
-        pstmt: *mut std::ffi::c_void, i: std::ffi::c_int, z: *const std::ffi::c_char, n: std::ffi::c_int,
+        pstmt: *mut std::ffi::c_void,
+        i: std::ffi::c_int,
+        z: *const std::ffi::c_char,
+        n: std::ffi::c_int,
         destructor: *const std::ffi::c_void,
     ) -> std::ffi::c_int;
     fn sqlite3_last_insert_rowid(db: *mut std::ffi::c_void) -> i64;
@@ -134,9 +146,9 @@ unsafe fn push_db_errmsg(state: *mut State, db: *mut std::ffi::c_void) {
 unsafe fn bind_value(state: *mut State, stmt: *mut std::ffi::c_void, i: std::ffi::c_int, arg: i32) -> std::ffi::c_int {
     unsafe {
         match lua_type(state, arg) {
-            | None | Some(TagType::Nil) => sqlite3_bind_null(stmt, i),
-            | Some(TagType::Boolean) => sqlite3_bind_int64(stmt, i, lua_toboolean(state, arg) as i64),
-            | Some(TagType::Numeric) => {
+            None | Some(TagType::Nil) => sqlite3_bind_null(stmt, i),
+            Some(TagType::Boolean) => sqlite3_bind_int64(stmt, i, lua_toboolean(state, arg) as i64),
+            Some(TagType::Numeric) => {
                 if lua_isinteger(state, arg) {
                     let v = lua_tointegerx(state, arg, null_mut());
                     sqlite3_bind_int64(stmt, i, v)
@@ -144,13 +156,13 @@ unsafe fn bind_value(state: *mut State, stmt: *mut std::ffi::c_void, i: std::ffi
                     let v = lua_tonumberx(state, arg, null_mut());
                     sqlite3_bind_double(stmt, i, v)
                 }
-            },
-            | Some(TagType::String) => {
+            }
+            Some(TagType::String) => {
                 let mut slen = 0usize;
                 let sptr = lua_tolstring(state, arg, &mut slen);
                 sqlite3_bind_text(stmt, i, sptr, slen as std::ffi::c_int, SQLITE_TRANSIENT)
-            },
-            | _ => sqlite3_bind_null(stmt, i),
+            }
+            _ => sqlite3_bind_null(stmt, i),
         }
     }
 }
@@ -249,18 +261,18 @@ pub unsafe fn rows_iter(state: *mut State) -> i32 {
         }
 
         match sqlite3_step((*p).stmt) {
-            | SQLITE_ROW => {
+            SQLITE_ROW => {
                 push_row_table(state, (*p).stmt);
                 1
-            },
-            | _ => {
+            }
+            _ => {
                 // SQLITE_DONE or an error — either way we are finished
                 sqlite3_finalize((*p).stmt);
                 (*p).stmt = null_mut();
                 (*p).done = true;
                 (*state).push_nil();
                 1
-            },
+            }
         }
     }
 }
@@ -277,10 +289,10 @@ pub unsafe fn sqlite_open(state: *mut State) -> i32 {
             let mptr = lua_tolstring(state, 2, &mut mlen);
             let mode = std::slice::from_raw_parts(mptr as *const u8, mlen);
             match mode {
-                | b"ro" => SQLITE_OPEN_READONLY | SQLITE_OPEN_URI,
-                | b"rw" => SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI,
-                | b"rwc" => SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI,
-                | _ => SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI,
+                b"ro" => SQLITE_OPEN_READONLY | SQLITE_OPEN_URI,
+                b"rw" => SQLITE_OPEN_READWRITE | SQLITE_OPEN_URI,
+                b"rwc" => SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI,
+                _ => SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI,
             }
         } else {
             SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI
@@ -383,21 +395,21 @@ pub unsafe fn sqlite_db_query(state: *mut State) -> i32 {
         let mut row_idx = 1i64;
         loop {
             match sqlite3_step(stmt) {
-                | SQLITE_ROW => {
+                SQLITE_ROW => {
                     (*state).push_integer(row_idx); // key
                     push_row_table(state, stmt); // value
                     lua_rawset(state, -3);
                     row_idx += 1;
-                },
-                | SQLITE_DONE => break,
-                | _ => {
+                }
+                SQLITE_DONE => break,
+                _ => {
                     // Error mid-iteration: pop table, return nil + errmsg
                     lua_settop(state, -2);
                     sqlite3_finalize(stmt);
                     (*state).push_nil();
                     push_db_errmsg(state, db);
                     return 2;
-                },
+                }
             }
         }
 
@@ -534,19 +546,19 @@ pub unsafe fn sqlite_stmt_step(state: *mut State) -> i32 {
     unsafe {
         let (stmt, db) = checkstmt(state);
         match sqlite3_step(stmt) {
-            | SQLITE_ROW => {
+            SQLITE_ROW => {
                 lua_pushstring(state, c"row".as_ptr());
                 1
-            },
-            | SQLITE_DONE => {
+            }
+            SQLITE_DONE => {
                 lua_pushstring(state, c"done".as_ptr());
                 1
-            },
-            | _ => {
+            }
+            _ => {
                 (*state).push_nil();
                 push_db_errmsg(state, db);
                 2
-            },
+            }
         }
     }
 }
@@ -707,7 +719,12 @@ pub unsafe fn luaopen_sqlite(state: *mut State) -> i32 {
         lual_newmetatable(state, DB_META);
         lual_setfuncs(state, SQLITE_DB_META.as_ptr(), SQLITE_DB_META.len(), 0);
         (*state).lua_createtable();
-        lual_setfuncs(state, SQLITE_DB_METHODS.as_ptr(), SQLITE_DB_METHODS.len(), 0);
+        lual_setfuncs(
+            state,
+            SQLITE_DB_METHODS.as_ptr(),
+            SQLITE_DB_METHODS.len(),
+            0,
+        );
         lua_setfield(state, -2, c"__index".as_ptr());
         lua_settop(state, -2); // pop db metatable
 
@@ -715,7 +732,12 @@ pub unsafe fn luaopen_sqlite(state: *mut State) -> i32 {
         lual_newmetatable(state, STMT_META);
         lual_setfuncs(state, SQLITE_STMT_META.as_ptr(), SQLITE_STMT_META.len(), 0);
         (*state).lua_createtable();
-        lual_setfuncs(state, SQLITE_STMT_METHODS.as_ptr(), SQLITE_STMT_METHODS.len(), 0);
+        lual_setfuncs(
+            state,
+            SQLITE_STMT_METHODS.as_ptr(),
+            SQLITE_STMT_METHODS.len(),
+            0,
+        );
         lua_setfield(state, -2, c"__index".as_ptr());
         lua_settop(state, -2); // pop stmt metatable
 

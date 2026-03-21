@@ -91,7 +91,11 @@ pub fn applyparam(p: u8, x: i64) -> i64 {
     }
     e -= GCPARAM_EXCESS;
     if e >= 0 {
-        if x < (MAX_LMEM / GCPARAM_MAX_MANTISSA) >> e { (x * m) << e } else { MAX_LMEM }
+        if x < (MAX_LMEM / GCPARAM_MAX_MANTISSA) >> e {
+            (x * m) << e
+        } else {
+            MAX_LMEM
+        }
     } else {
         let e = (-e) as u32;
         if x < MAX_LMEM / GCPARAM_MAX_MANTISSA {
@@ -192,7 +196,13 @@ impl Global {
             } else {
                 let mut newblock: *mut std::ffi::c_void = raw_allocate(null_mut(), 0, newsize);
                 if newblock.is_null() {
-                    if self.global_nonevalue.get_tagvariant().to_tag_type().is_nil() && self.global_gcstopem == 0 {
+                    if self
+                        .global_nonevalue
+                        .get_tagvariant()
+                        .to_tag_type()
+                        .is_nil()
+                        && self.global_gcstopem == 0
+                    {
                         self.luac_fullgc(state, true);
                         newblock = raw_allocate(null_mut(), 0, newsize);
                     } else {
@@ -208,12 +218,22 @@ impl Global {
         }
     }
     pub unsafe fn reallocate(
-        &mut self, state: *mut State, oldblock: *mut std::ffi::c_void, oldsize: usize, newsize: usize,
+        &mut self,
+        state: *mut State,
+        oldblock: *mut std::ffi::c_void,
+        oldsize: usize,
+        newsize: usize,
     ) -> *mut std::ffi::c_void {
         unsafe {
             let mut newblock = raw_allocate(oldblock, oldsize, newsize);
             if newblock.is_null() && newsize > 0 {
-                if self.global_nonevalue.get_tagvariant().to_tag_type().is_nil() && self.global_gcstopem == 0 {
+                if self
+                    .global_nonevalue
+                    .get_tagvariant()
+                    .to_tag_type()
+                    .is_nil()
+                    && self.global_gcstopem == 0
+                {
                     self.luac_fullgc(state, true);
                     newblock = raw_allocate(oldblock, oldsize, newsize);
                 } else {
@@ -240,7 +260,12 @@ impl Global {
     pub unsafe fn close(&mut self) {
         unsafe {
             let maininterpreter = self.global_maininterpreter;
-            if self.global_nonevalue.get_tagvariant().to_tag_type().is_nil() {
+            if self
+                .global_nonevalue
+                .get_tagvariant()
+                .to_tag_type()
+                .is_nil()
+            {
                 (*maininterpreter).interpreter_callinfo = &mut (*maininterpreter).interpreter_base_callinfo;
                 (*maininterpreter).interpreter_error_function = 0;
                 do_close_protected(maininterpreter, 1_i64, Status::OK);
@@ -251,12 +276,23 @@ impl Global {
                 self.luac_freeallobjects(maininterpreter);
             }
             (*maininterpreter).free_memory(
-                (*(*maininterpreter).interpreter_global).global_stringtable.stringtable_hash as *mut std::ffi::c_void,
-                (*(*maininterpreter).interpreter_global).global_stringtable.stringtable_size * size_of::<*mut TString>(),
+                (*(*maininterpreter).interpreter_global)
+                    .global_stringtable
+                    .stringtable_hash as *mut std::ffi::c_void,
+                (*(*maininterpreter).interpreter_global)
+                    .global_stringtable
+                    .stringtable_size
+                    * size_of::<*mut TString>(),
             );
             freestack(maininterpreter);
-            std::alloc::dealloc(maininterpreter as *mut u8, std::alloc::Layout::new::<State>());
-            std::alloc::dealloc(self as *mut Global as *mut u8, std::alloc::Layout::new::<Global>());
+            std::alloc::dealloc(
+                maininterpreter as *mut u8,
+                std::alloc::Layout::new::<State>(),
+            );
+            std::alloc::dealloc(
+                self as *mut Global as *mut u8,
+                std::alloc::Layout::new::<Global>(),
+            );
         }
     }
     pub fn initialize(&mut self) {
@@ -267,7 +303,8 @@ impl Global {
         self.global_stringtable.stringtable_length = 0;
         self.global_stringtable.stringtable_size = 0;
         self.global_stringtable.stringtable_hash = null_mut();
-        self.global_lregistry.tvalue_set_tag_variant(TagVariant::NilNil);
+        self.global_lregistry
+            .tvalue_set_tag_variant(TagVariant::NilNil);
         self.global_panic = None;
         self.global_gcstate = GCS_PAUSE as u8;
         self.global_gckind = GCKind::Incremental;
@@ -330,7 +367,10 @@ impl Global {
         }
     }
     pub fn checkminormajor(&self) -> bool {
-        let limit = applyparam(self.global_gcparams[GCP_MINORMAJOR], self.global_gcmajorminor);
+        let limit = applyparam(
+            self.global_gcparams[GCP_MINORMAJOR],
+            self.global_gcmajorminor,
+        );
         if limit == 0 {
             return false;
         }
@@ -358,20 +398,20 @@ impl Global {
             let stepresult: i64;
             self.global_gcstopem = 1;
             match self.global_gcstate as i32 {
-                | GCS_PAUSE => {
+                GCS_PAUSE => {
                     self.restartcollection();
                     self.global_gcstate = GCS_PROPAGATE as u8;
                     stepresult = 1;
-                },
-                | GCS_PROPAGATE => {
+                }
+                GCS_PROPAGATE => {
                     if fast || (self.global_gray).is_null() {
                         self.global_gcstate = GCS_ENTERATOMIC as u8;
                         stepresult = 1;
                     } else {
                         stepresult = self.propagatemark() as i64;
                     }
-                },
-                | GCS_ENTERATOMIC => {
+                }
+                GCS_ENTERATOMIC => {
                     self.atomic(state);
                     if self.checkmajorminor(state) {
                         stepresult = STEP2MINOR;
@@ -379,27 +419,27 @@ impl Global {
                         self.entersweep(state);
                         stepresult = ATOMICSTEP;
                     }
-                },
-                | GCS_SWPALLGC => {
+                }
+                GCS_SWPALLGC => {
                     let p = &mut self.global_finalizedobjects as *mut *mut Object;
                     self.sweepstep_unified(state, fast, GCS_SWPFINOBJ, p);
                     stepresult = GCSWEEPMAX as i64;
-                },
-                | GCS_SWPFINOBJ => {
+                }
+                GCS_SWPFINOBJ => {
                     let p = &mut self.global_tobefinalized as *mut *mut Object;
                     self.sweepstep_unified(state, fast, GCS_SWPTOBEFNZ, p);
                     stepresult = GCSWEEPMAX as i64;
-                },
-                | GCS_SWPTOBEFNZ => {
+                }
+                GCS_SWPTOBEFNZ => {
                     self.sweepstep_unified(state, fast, GCS_SWPEND, null_mut());
                     stepresult = GCSWEEPMAX as i64;
-                },
-                | GCS_SWPEND => {
+                }
+                GCS_SWPEND => {
                     self.check_sizes(state);
                     self.global_gcstate = GCS_CALLFIN as u8;
                     stepresult = GCSWEEPMAX as i64;
-                },
-                | GCS_CALLFIN => {
+                }
+                GCS_CALLFIN => {
                     if !(self.global_tobefinalized).is_null() && !self.global_is_emergency {
                         self.global_gcstopem = 0;
                         gctm_function(state);
@@ -408,8 +448,8 @@ impl Global {
                         self.global_gcstate = GCS_PAUSE as u8;
                         stepresult = STEP2PAUSE;
                     }
-                },
-                | _ => return 0,
+                }
+                _ => return 0,
             }
             self.global_gcstopem = 0;
             stepresult
@@ -430,13 +470,13 @@ impl Global {
                 self.set_debt(-20000);
             } else {
                 match self.global_gckind {
-                    | GCKind::Incremental | GCKind::GenerationalMajor => {
+                    GCKind::Incremental | GCKind::GenerationalMajor => {
                         self.incstep(state);
-                    },
-                    | GCKind::GenerationalMinor => {
+                    }
+                    GCKind::GenerationalMinor => {
                         self.youngcollection(state);
                         self.set_minor_debt();
-                    },
+                    }
                 }
             }
         }
@@ -444,7 +484,10 @@ impl Global {
     pub unsafe fn incstep(&mut self, state: *mut State) {
         unsafe {
             let stepsize: i64 = applyparam(self.global_gcparams[GCP_STEPSIZE], 100);
-            let work2do: i64 = applyparam(self.global_gcparams[GCP_STEPMUL], stepsize / size_of::<*mut ()>() as i64);
+            let work2do: i64 = applyparam(
+                self.global_gcparams[GCP_STEPMUL],
+                stepsize / size_of::<*mut ()>() as i64,
+            );
             let fast = work2do == 0;
             let mut remaining = work2do;
             loop {
@@ -527,17 +570,17 @@ impl Global {
         unsafe {
             self.global_is_emergency = is_emergency;
             match self.global_gckind {
-                | GCKind::GenerationalMinor => {
+                GCKind::GenerationalMinor => {
                     self.fullgen(state);
-                },
-                | GCKind::Incremental => {
+                }
+                GCKind::Incremental => {
                     self.fullinc(state);
-                },
-                | GCKind::GenerationalMajor => {
+                }
+                GCKind::GenerationalMajor => {
                     self.global_gckind = GCKind::Incremental;
                     self.fullinc(state);
                     self.global_gckind = GCKind::GenerationalMajor;
-                },
+                }
             }
             self.global_is_emergency = false;
             self.setpause();
@@ -624,19 +667,41 @@ impl Global {
             self.atomic(state);
             self.global_gcstate = GCS_SWPALLGC as u8;
             let mut psurvival: *mut *mut Object = sweepgen(
-                state, self, &mut self.global_allgc, self.global_survival, &mut self.global_firstold1, &mut addedold1,
+                state,
+                self,
+                &mut self.global_allgc,
+                self.global_survival,
+                &mut self.global_firstold1,
+                &mut addedold1,
             );
             sweepgen(
-                state, self, psurvival, self.global_old1, &mut self.global_firstold1, &mut addedold1,
+                state,
+                self,
+                psurvival,
+                self.global_old1,
+                &mut self.global_firstold1,
+                &mut addedold1,
             );
             self.global_reallyold = self.global_old1;
             self.global_old1 = *psurvival;
             self.global_survival = self.global_allgc;
             let mut dummy: *mut Object = null_mut();
             psurvival = sweepgen(
-                state, self, &mut self.global_finalizedobjects, self.global_finobjsur, &mut dummy, &mut addedold1,
+                state,
+                self,
+                &mut self.global_finalizedobjects,
+                self.global_finobjsur,
+                &mut dummy,
+                &mut addedold1,
             );
-            sweepgen(state, self, psurvival, self.global_finobjold1, &mut dummy, &mut addedold1);
+            sweepgen(
+                state,
+                self,
+                psurvival,
+                self.global_finobjold1,
+                &mut dummy,
+                &mut addedold1,
+            );
             self.global_finobjrold = self.global_finobjold1;
             self.global_finobjold1 = *psurvival;
             self.global_finobjsur = self.global_finalizedobjects;
@@ -663,7 +728,11 @@ impl Global {
             self.luac_changemode(state, GCKind::Incremental);
             self.separatetobefnz(true);
             self.callallpendingfinalizers(state);
-            Object::delete_list(state, self.global_allgc, self.global_maininterpreter as *mut Object);
+            Object::delete_list(
+                state,
+                self.global_allgc,
+                self.global_maininterpreter as *mut Object,
+            );
             Object::delete_list(state, self.global_fixedgc, null_mut());
         }
     }
@@ -681,7 +750,11 @@ impl Global {
         unsafe {
             let stringtable: *mut StringTable = &mut self.global_stringtable;
             (*stringtable).initialize(state);
-            self.global_memoryerrormessage = luas_newlstr(state, c"not enough memory".as_ptr(), "not enough memory".len());
+            self.global_memoryerrormessage = luas_newlstr(
+                state,
+                c"not enough memory".as_ptr(),
+                "not enough memory".len(),
+            );
             Object::fix_object_global(self, self.global_memoryerrormessage as *mut Object);
             for i in 0..GLOBAL_STRINGCACHE_N {
                 for j in 0..GLOBAL_STRINGCACHE_M {
@@ -775,7 +848,10 @@ impl Global {
     }
     pub unsafe fn set_minor_debt(&mut self) {
         unsafe {
-            self.set_debt(-applyparam(self.global_gcparams[GCP_MINORMUL], self.global_gcmajorminor));
+            self.set_debt(-applyparam(
+                self.global_gcparams[GCP_MINORMUL],
+                self.global_gcmajorminor,
+            ));
         }
     }
     pub unsafe fn propagatemark(&mut self) -> usize {
@@ -784,13 +860,13 @@ impl Global {
             (*object).set_marked((*object).get_marked() | BLACKBIT);
             self.global_gray = *(*object).getgclist();
             match (*object).get_tagvariant() {
-                | TagVariant::Table => traversetable(self, object as *mut Table),
-                | TagVariant::User => (*(object as *mut User)).traverseudata(self) as usize,
-                | TagVariant::ClosureL => Closure::traverselclosure(self, object as *mut Closure),
-                | TagVariant::ClosureC => Closure::traversecclosure(self, object as *mut Closure),
-                | TagVariant::Prototype => (&mut *(object as *mut Prototype)).prototype_traverse(self),
-                | TagVariant::State => traverse_state(self, object as *mut State) as usize,
-                | _ => 0,
+                TagVariant::Table => traversetable(self, object as *mut Table),
+                TagVariant::User => (*(object as *mut User)).traverseudata(self) as usize,
+                TagVariant::ClosureL => Closure::traverselclosure(self, object as *mut Closure),
+                TagVariant::ClosureC => Closure::traversecclosure(self, object as *mut Closure),
+                TagVariant::Prototype => (&mut *(object as *mut Prototype)).prototype_traverse(self),
+                TagVariant::State => traverse_state(self, object as *mut State) as usize,
+                _ => 0,
             }
         }
     }
@@ -811,7 +887,10 @@ impl Global {
                 if !(self.global_metatables[i as usize]).is_null()
                     && (*self.global_metatables[i as usize]).get_marked() & WHITEBITS != 0
                 {
-                    Object::really_mark_object(self, *(self.global_metatables).as_mut_ptr().add(i as usize) as *mut Object);
+                    Object::really_mark_object(
+                        self,
+                        *(self.global_metatables).as_mut_ptr().add(i as usize) as *mut Object,
+                    );
                 }
             }
         }
@@ -946,7 +1025,9 @@ pub unsafe fn clearbykeys(global: *mut Global, mut l: *mut ObjectWithGCList) {
             let mut node: *mut Node = &mut *((*table).table_node).add(0) as *mut Node;
             while node < limit {
                 if Object::iscleared(global, (*node).node_key.as_object().unwrap_or(null_mut())) != 0 {
-                    (*node).node_value.tvalue_set_tag_variant(TagVariant::NilEmpty);
+                    (*node)
+                        .node_value
+                        .tvalue_set_tag_variant(TagVariant::NilEmpty);
                 }
                 if (*node).node_value.get_tagvariant().to_tag_type().is_nil() {
                     (*node).clearkey();
@@ -975,7 +1056,9 @@ pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut ObjectWithGCList, f
             let mut node: *mut Node = &mut *((*table).table_node).add(0) as *mut Node;
             while node < limit {
                 if Object::iscleared(global, (*node).node_value.as_object().unwrap_or(null_mut())) != 0 {
-                    (*node).node_value.tvalue_set_tag_variant(TagVariant::NilEmpty);
+                    (*node)
+                        .node_value
+                        .tvalue_set_tag_variant(TagVariant::NilEmpty);
                 }
                 if (*node).node_value.get_tagvariant().to_tag_type().is_nil() {
                     (*node).clearkey();
@@ -1008,28 +1091,32 @@ pub unsafe fn lua_gc(state: *mut State, what: i32, args: &[i32]) -> i32 {
             return -1;
         }
         match what {
-            | GC_STOP => {
+            GC_STOP => {
                 (*global).global_gcstep = 1;
-            },
-            | GC_RESTART => {
+            }
+            GC_RESTART => {
                 (*global).set_debt(0);
                 (*global).global_gcstep = 0;
-            },
-            | GC_COLLECT => {
+            }
+            GC_COLLECT => {
                 (*global).luac_fullgc(state, false);
-            },
-            | GC_COUNT => {
+            }
+            GC_COUNT => {
                 res = (((*global).global_count_total_bytes + (*global).global_count_gc_debt) as usize >> 10_i32) as i32;
-            },
-            | GC_COUNTB => {
+            }
+            GC_COUNTB => {
                 res = (((*global).global_count_total_bytes + (*global).global_count_gc_debt) as usize & 0x3ff_usize) as i32;
-            },
-            | GC_STEP => {
+            }
+            GC_STEP => {
                 let n: i64 = args.first().copied().unwrap_or(0) as i64;
                 let oldstp: u8 = (*global).global_gcstep;
                 let mut work: i32 = 0;
                 (*global).global_gcstep = 0;
-                let n = if n <= 0 { -(*global).global_count_gc_debt } else { n };
+                let n = if n <= 0 {
+                    -(*global).global_count_gc_debt
+                } else {
+                    n
+                };
                 (*global).set_debt((*global).global_count_gc_debt + n);
                 if (*global).global_count_gc_debt >= 0 {
                     (*state).do_gc_step();
@@ -1039,27 +1126,27 @@ pub unsafe fn lua_gc(state: *mut State, what: i32, args: &[i32]) -> i32 {
                     res = 1;
                 }
                 (*global).global_gcstep = oldstp;
-            },
-            | GC_ISRUNNING => {
+            }
+            GC_ISRUNNING => {
                 res = ((*global).global_gcstep as i32 == 0) as i32;
-            },
-            | GC_GENERATIONAL => {
+            }
+            GC_GENERATIONAL => {
                 res = if (*global).global_gckind == GCKind::Incremental {
                     GC_INCREMENTAL
                 } else {
                     GC_GENERATIONAL
                 };
                 (*global).luac_changemode(state, GCKind::GenerationalMinor);
-            },
-            | GC_INCREMENTAL => {
+            }
+            GC_INCREMENTAL => {
                 res = if (*global).global_gckind == GCKind::Incremental {
                     GC_INCREMENTAL
                 } else {
                     GC_GENERATIONAL
                 };
                 (*global).luac_changemode(state, GCKind::Incremental);
-            },
-            | GC_PARAM => {
+            }
+            GC_PARAM => {
                 let param: i32 = args[0];
                 let value: i32 = args[1];
                 if param >= 0 && (param as usize) < GCPN {
@@ -1070,10 +1157,10 @@ pub unsafe fn lua_gc(state: *mut State, what: i32, args: &[i32]) -> i32 {
                 } else {
                     res = -1;
                 }
-            },
-            | _ => {
+            }
+            _ => {
                 res = -1;
-            },
+            }
         }
         res
     }

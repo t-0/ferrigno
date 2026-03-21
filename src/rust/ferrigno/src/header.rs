@@ -43,103 +43,115 @@ impl Header {
             let opt: i32 = *current_char as i32;
             *size = 0;
             match Character::from(opt) {
-                | Character::LowerB => {
+                Character::LowerB => {
                     *size = 1;
                     return PackingType::Integer;
-                },
-                | Character::UpperB => {
+                }
+                Character::UpperB => {
                     *size = 1;
                     return PackingType::Unsigned;
-                },
-                | Character::LowerH => {
+                }
+                Character::LowerH => {
                     *size = size_of::<i16>();
                     return PackingType::Integer;
-                },
-                | Character::UpperH => {
+                }
+                Character::UpperH => {
                     *size = size_of::<i16>();
                     return PackingType::Unsigned;
-                },
-                | Character::LowerL => {
+                }
+                Character::LowerL => {
                     *size = size_of::<i64>();
                     return PackingType::Integer;
-                },
-                | Character::UpperL => {
+                }
+                Character::UpperL => {
                     *size = size_of::<i64>();
                     return PackingType::Unsigned;
-                },
-                | Character::LowerJ => {
+                }
+                Character::LowerJ => {
                     *size = size_of::<i64>();
                     return PackingType::Integer;
-                },
-                | Character::UpperJ => {
+                }
+                Character::UpperJ => {
                     *size = size_of::<i64>();
                     return PackingType::Unsigned;
-                },
-                | Character::UpperT => {
+                }
+                Character::UpperT => {
                     *size = size_of::<usize>();
                     return PackingType::Unsigned;
-                },
-                | Character::LowerF => {
+                }
+                Character::LowerF => {
                     *size = size_of::<f32>();
                     return PackingType::Float;
-                },
-                | Character::LowerN => {
+                }
+                Character::LowerN => {
                     *size = size_of::<f64>();
                     return PackingType::Number;
-                },
-                | Character::LowerD => {
+                }
+                Character::LowerD => {
                     *size = size_of::<f64>();
                     return PackingType::Double;
-                },
-                | Character::LowerI => {
+                }
+                Character::LowerI => {
                     *size = self.getnumlimit(fmt, size_of::<i32>() as i32) as usize;
                     return PackingType::Integer;
-                },
-                | Character::UpperI => {
+                }
+                Character::UpperI => {
                     *size = self.getnumlimit(fmt, size_of::<i32>() as i32) as usize;
                     return PackingType::Unsigned;
-                },
-                | Character::LowerS => {
+                }
+                Character::LowerS => {
                     *size = self.getnumlimit(fmt, size_of::<usize>() as i32) as usize;
                     return PackingType::String;
-                },
-                | Character::LowerC => {
+                }
+                Character::LowerC => {
                     let csize: usize = getnum(fmt, usize::MAX);
                     if csize == usize::MAX {
-                        lual_error(self.header_interpreter, c"missing size for format option 'c'".as_ptr(), &[]);
+                        lual_error(
+                            self.header_interpreter,
+                            c"missing size for format option 'c'".as_ptr(),
+                            &[],
+                        );
                     }
                     *size = csize;
                     return PackingType::Character;
-                },
-                | Character::LowerZ => return PackingType::ZString,
-                | Character::LowerX => {
+                }
+                Character::LowerZ => return PackingType::ZString,
+                Character::LowerX => {
                     *size = 1;
                     return PackingType::Padding;
-                },
-                | Character::UpperX => return PackingType::PaddingAlignment,
-                | Character::Space => {},
-                | Character::AngleLeft => {
+                }
+                Character::UpperX => return PackingType::PaddingAlignment,
+                Character::Space => {}
+                Character::AngleLeft => {
                     self.header_islittleendian = true;
-                },
-                | Character::AngleRight => {
+                }
+                Character::AngleRight => {
                     self.header_islittleendian = false;
-                },
-                | Character::Equal => {
+                }
+                Character::Equal => {
                     self.header_islittleendian = NATIVE_ENDIAN.nativeendian_little != 0;
-                },
-                | Character::Exclamation => {
+                }
+                Character::Exclamation => {
                     let maxalign: i32 = 8;
                     self.header_maxmimumalignment = self.getnumlimit(fmt, maxalign);
-                },
-                | _ => {
-                    lual_error(self.header_interpreter, c"invalid format option '%c'".as_ptr(), &[opt.into()]);
-                },
+                }
+                _ => {
+                    lual_error(
+                        self.header_interpreter,
+                        c"invalid format option '%c'".as_ptr(),
+                        &[opt.into()],
+                    );
+                }
             }
             PackingType::NoOperator
         }
     }
     pub unsafe fn getdetails(
-        &mut self, totalsize: usize, fmt: *mut *const i8, total_size: *mut usize, ntoalign: *mut usize,
+        &mut self,
+        totalsize: usize,
+        fmt: *mut *const i8,
+        total_size: *mut usize,
+        ntoalign: *mut usize,
     ) -> PackingType {
         unsafe {
             let opt: PackingType = self.getoption(fmt, total_size);
@@ -149,7 +161,11 @@ impl Header {
                     || self.getoption(fmt, &mut align) as u32 == PackingType::Character as u32
                     || align == 0)
             {
-                lual_argerror(self.header_interpreter, 1, c"invalid next option for option X".as_ptr());
+                lual_argerror(
+                    self.header_interpreter,
+                    1,
+                    c"invalid next option for option X".as_ptr(),
+                );
             }
             if align <= 1 || opt as u32 == PackingType::Character as u32 {
                 *ntoalign = 0;
@@ -158,7 +174,11 @@ impl Header {
                     align = self.header_maxmimumalignment as usize;
                 }
                 if align & (align - 1) != 0 {
-                    lual_argerror(self.header_interpreter, 1, c"format asks for alignment not power of 2".as_ptr());
+                    lual_argerror(
+                        self.header_interpreter,
+                        1,
+                        c"format asks for alignment not power of 2".as_ptr(),
+                    );
                 }
                 *ntoalign = (align - (totalsize & (align - 1))) & (align - 1);
             }

@@ -33,15 +33,16 @@ pub unsafe fn equal_key(k1: *const TValue, node: *const Node, deadok: i32) -> bo
             false
         } else {
             match (*node).node_key.get_tagvariant() {
-                | TagVariant::NilNil | TagVariant::BooleanFalse | TagVariant::BooleanTrue => true,
-                | TagVariant::NumericInteger => (*k1).as_integer().unwrap() == (*node).node_key.as_integer().unwrap(),
-                | TagVariant::NumericNumber => (*k1).as_number().unwrap() == (*node).node_key.as_number().unwrap(),
-                | TagVariant::Pointer => (*k1).as_pointer().unwrap() == (*node).node_key.as_pointer().unwrap(),
-                | TagVariant::ClosureCFunction => (*k1).as_function().unwrap() == (*node).node_key.as_function().unwrap(),
-                | TagVariant::StringLong => {
-                    luas_eqlngstr(&mut *(*k1).as_string().unwrap(), &mut *(*node).node_key.as_string().unwrap())
-                },
-                | _ => (*k1).raw_object_ptr() == (*node).node_key.raw_object_ptr(),
+                TagVariant::NilNil | TagVariant::BooleanFalse | TagVariant::BooleanTrue => true,
+                TagVariant::NumericInteger => (*k1).as_integer().unwrap() == (*node).node_key.as_integer().unwrap(),
+                TagVariant::NumericNumber => (*k1).as_number().unwrap() == (*node).node_key.as_number().unwrap(),
+                TagVariant::Pointer => (*k1).as_pointer().unwrap() == (*node).node_key.as_pointer().unwrap(),
+                TagVariant::ClosureCFunction => (*k1).as_function().unwrap() == (*node).node_key.as_function().unwrap(),
+                TagVariant::StringLong => luas_eqlngstr(
+                    &mut *(*k1).as_string().unwrap(),
+                    &mut *(*node).node_key.as_string().unwrap(),
+                ),
+                _ => (*k1).raw_object_ptr() == (*node).node_key.raw_object_ptr(),
             }
         }
     }

@@ -59,7 +59,11 @@ unsafe fn check_out(state: *mut State) -> *mut MidiOutputData {
     unsafe {
         let p = lual_checkudata(state, 1, OUT_META) as *mut MidiOutputData;
         if (*p).closed {
-            lual_error(state, c"attempt to use a closed MIDI output port".as_ptr(), &[]);
+            lual_error(
+                state,
+                c"attempt to use a closed MIDI output port".as_ptr(),
+                &[],
+            );
             unreachable!()
         }
         p
@@ -70,7 +74,11 @@ unsafe fn check_in(state: *mut State) -> *mut MidiInputData {
     unsafe {
         let p = lual_checkudata(state, 1, IN_META) as *mut MidiInputData;
         if (*p).closed {
-            lual_error(state, c"attempt to use a closed MIDI input port".as_ptr(), &[]);
+            lual_error(
+                state,
+                c"attempt to use a closed MIDI input port".as_ptr(),
+                &[],
+            );
             unreachable!()
         }
         p
@@ -286,8 +294,8 @@ pub unsafe fn midi_in_recv(state: *mut State) -> i32 {
             }
 
             match deadline {
-                | Some(dl) if std::time::Instant::now() >= dl => break,
-                | _ => {},
+                Some(dl) if std::time::Instant::now() >= dl => break,
+                _ => {}
             }
 
             std::thread::sleep(std::time::Duration::from_millis(1));
@@ -381,19 +389,19 @@ pub unsafe fn midi_destinations(state: *mut State) -> i32 {
 unsafe fn parse_endpoint_selector(state: *mut State, arg: i32) -> EndpointSelector<'static> {
     unsafe {
         match lua_type(state, arg) {
-            | Some(TagType::Numeric) => {
+            Some(TagType::Numeric) => {
                 let idx = lua_tointegerx(state, arg, null_mut());
                 EndpointSelector::Index(idx as usize)
-            },
-            | Some(TagType::String) => {
+            }
+            Some(TagType::String) => {
                 let mut slen = 0usize;
                 let sptr = lua_tolstring(state, arg, &mut slen);
                 let s = std::slice::from_raw_parts(sptr as *const u8, slen);
                 // Leak the string so it has 'static lifetime — it's short-lived anyway
                 let owned = String::from_utf8_lossy(s).into_owned();
                 EndpointSelector::Name(Box::leak(owned.into_boxed_str()))
-            },
-            | _ => EndpointSelector::Index(0), // will fail resolution
+            }
+            _ => EndpointSelector::Index(0), // will fail resolution
         }
     }
 }
@@ -403,20 +411,20 @@ pub unsafe fn midi_open_output(state: *mut State) -> i32 {
         let sel = parse_endpoint_selector(state, 1);
         let backend = platform_backend();
         match backend.open_output(sel) {
-            | Ok(output) => {
+            Ok(output) => {
                 let boxed = Box::new(output);
                 let user_data = User::lua_newuserdatauv(state, size_of::<MidiOutputData>(), 0) as *mut MidiOutputData;
                 (*user_data).inner = Box::into_raw(boxed);
                 (*user_data).closed = false;
                 lual_setmetatable(state, OUT_META);
                 1
-            },
-            | Err(e) => {
+            }
+            Err(e) => {
                 (*state).push_nil();
                 let msg = format!("{}\0", e);
                 lua_pushstring(state, msg.as_ptr() as *const std::ffi::c_char);
                 2
-            },
+            }
         }
     }
 }
@@ -426,20 +434,20 @@ pub unsafe fn midi_open_input(state: *mut State) -> i32 {
         let sel = parse_endpoint_selector(state, 1);
         let backend = platform_backend();
         match backend.open_input(sel) {
-            | Ok(input) => {
+            Ok(input) => {
                 let boxed = Box::new(input);
                 let user_data = User::lua_newuserdatauv(state, size_of::<MidiInputData>(), 0) as *mut MidiInputData;
                 (*user_data).inner = Box::into_raw(boxed);
                 (*user_data).closed = false;
                 lual_setmetatable(state, IN_META);
                 1
-            },
-            | Err(e) => {
+            }
+            Err(e) => {
                 (*state).push_nil();
                 let msg = format!("{}\0", e);
                 lua_pushstring(state, msg.as_ptr() as *const std::ffi::c_char);
                 2
-            },
+            }
         }
     }
 }

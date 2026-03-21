@@ -11,7 +11,11 @@ pub struct LoadS<T> {
 }
 impl<T> TDefaultNew for LoadS<T> {
     fn new() -> LoadS<T> {
-        LoadS::<T> { loads_pointer: null_mut(), loads_length: 0, loads_size: 0 }
+        LoadS::<T> {
+            loads_pointer: null_mut(),
+            loads_length: 0,
+            loads_size: 0,
+        }
     }
 }
 impl<T> LoadS<T> {
@@ -48,8 +52,11 @@ impl<T> LoadS<T> {
         unsafe {
             let old_total = self.loads_size as usize * size_of::<T>();
             let new_total = newsize * size_of::<T>();
-            self.loads_pointer =
-                (*state).safereallocate(self.loads_pointer as *mut std::ffi::c_void, old_total, new_total) as *mut T;
+            self.loads_pointer = (*state).safereallocate(
+                self.loads_pointer as *mut std::ffi::c_void,
+                old_total,
+                new_total,
+            ) as *mut T;
             self.loads_length = 0;
             self.loads_size = newsize as i32;
         }
@@ -74,7 +81,11 @@ impl<T> LoadS<T> {
     }
     pub unsafe fn destroy(&mut self, state: *mut State) {
         unsafe {
-            (*state).safereallocate(self.loads_pointer as *mut std::ffi::c_void, (self.loads_size as usize), 0);
+            (*state).safereallocate(
+                self.loads_pointer as *mut std::ffi::c_void,
+                (self.loads_size as usize),
+                0,
+            );
             self.loads_pointer = null_mut();
             self.loads_size = 0;
         }
@@ -87,7 +98,11 @@ impl<T> LoadS<T> {
             }
             if newsize >= limit / 2 {
                 if newsize >= limit {
-                    luag_runerror(state, c"too many %s (limit is %d)".as_ptr(), &[what.into(), limit.into()]);
+                    luag_runerror(
+                        state,
+                        c"too many %s (limit is %d)".as_ptr(),
+                        &[what.into(), limit.into()],
+                    );
                 }
                 newsize = limit;
             } else {

@@ -45,11 +45,11 @@ impl ObjectWithGCList {
                         gray_action = REMOVE_FROM_GRAY;
                     }
                     match gray_action {
-                        | REMOVE_FROM_GRAY => {},
-                        | _ => {
+                        REMOVE_FROM_GRAY => {}
+                        _ => {
                             objects = next;
                             continue;
-                        },
+                        }
                     }
                 }
                 *objects = *next;

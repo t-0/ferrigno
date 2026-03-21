@@ -52,9 +52,9 @@ impl Closure {
     pub unsafe fn closure_free(&mut self, state: *mut State) {
         unsafe {
             let size = match self.get_tagvariant() {
-                | TagVariant::ClosureC => Closure::size_cclosure(self.closure_count_upvalues as usize),
-                | TagVariant::ClosureL => Closure::size_lclosure(self.closure_count_upvalues as usize),
-                | _ => 0,
+                TagVariant::ClosureC => Closure::size_cclosure(self.closure_count_upvalues as usize),
+                TagVariant::ClosureL => Closure::size_lclosure(self.closure_count_upvalues as usize),
+                _ => 0,
             };
             (*state).free_memory(self as *mut Closure as *mut std::ffi::c_void, size);
         }
@@ -132,26 +132,33 @@ impl Closure {
         }
     }
     pub unsafe fn auxgetinfo(
-        state: *mut State, mut what: *const i8, debuginfo: *mut DebugInfo, closure: *mut Closure, callinfo: *mut CallInfo,
+        state: *mut State,
+        mut what: *const i8,
+        debuginfo: *mut DebugInfo,
+        closure: *mut Closure,
+        callinfo: *mut CallInfo,
     ) -> i32 {
         unsafe {
             let mut status: i32 = 1;
             while *what != 0 {
                 match Character::from(*what as i32) {
-                    | Character::UpperS => {
+                    Character::UpperS => {
                         funcinfo(debuginfo, closure);
-                    },
-                    | Character::LowerL => {
+                    }
+                    Character::LowerL => {
                         (*debuginfo).debuginfo_current_line =
                             if !callinfo.is_null() && (*callinfo).callinfo_callstatus as i32 & CALLSTATUS_LUA == 0 {
                                 CallInfo::getcurrentline(callinfo)
                             } else {
                                 -1
                             };
-                    },
-                    | Character::LowerU => {
-                        (*debuginfo).debuginfo_count_upvalues =
-                            (if closure.is_null() { 0 } else { (*closure).closure_count_upvalues as i32 }) as u8;
+                    }
+                    Character::LowerU => {
+                        (*debuginfo).debuginfo_count_upvalues = (if closure.is_null() {
+                            0
+                        } else {
+                            (*closure).closure_count_upvalues as i32
+                        }) as u8;
                         if !(!closure.is_null() && (*closure).get_tagvariant() == TagVariant::ClosureL) {
                             (*debuginfo).debuginfo_is_variable_arguments = true;
                             (*debuginfo).debuginfo_count_parameters = 0;
@@ -162,8 +169,8 @@ impl Closure {
                             (*debuginfo).debuginfo_count_parameters =
                                 (*(*closure).closure_payload.closurepayload_lprototype).prototype_countparameters;
                         }
-                    },
-                    | Character::LowerT => {
+                    }
+                    Character::LowerT => {
                         (*debuginfo).debuginfo_is_tail_call = if !callinfo.is_null() {
                             0 != ((*callinfo).callinfo_callstatus as i32 & CALLSTATUS_TAIL)
                         } else {
@@ -175,15 +182,15 @@ impl Closure {
                             } else {
                                 0
                             };
-                    },
-                    | Character::LowerN => {
+                    }
+                    Character::LowerN => {
                         (*debuginfo).debuginfo_name_what = CallInfo::getfuncname(state, callinfo, &mut (*debuginfo).debuginfo_name);
                         if ((*debuginfo).debuginfo_name_what).is_null() {
                             (*debuginfo).debuginfo_name_what = c"".as_ptr();
                             (*debuginfo).debuginfo_name = null();
                         }
-                    },
-                    | Character::LowerR => {
+                    }
+                    Character::LowerR => {
                         if callinfo.is_null() || (*callinfo).callinfo_callstatus as i32 & CALLSTATUS_FIN == 0 {
                             (*debuginfo).debuginfo_count_transfer = 0;
                             (*debuginfo).debuginfo_transfer_function = (*debuginfo).debuginfo_count_transfer;
@@ -197,11 +204,11 @@ impl Closure {
                                 .callinfoconstituentb_transferinfo
                                 .callinfoconsistuentbtransferinfo_ntransfer;
                         }
-                    },
-                    | Character::UpperL | Character::LowerF => {},
-                    | _ => {
+                    }
+                    Character::UpperL | Character::LowerF => {}
+                    _ => {
                         status = 0;
-                    },
+                    }
                 }
                 what = what.add(1);
             }
@@ -210,7 +217,11 @@ impl Closure {
     }
     pub unsafe fn luaf_newcclosure(state: *mut State, count_upvalues: i32) -> *mut Closure {
         unsafe {
-            let object: *mut Object = luac_newobj(state, TagVariant::ClosureC, Closure::size_cclosure(count_upvalues as usize));
+            let object: *mut Object = luac_newobj(
+                state,
+                TagVariant::ClosureC,
+                Closure::size_cclosure(count_upvalues as usize),
+            );
             let ret: *mut Closure = &mut *(object as *mut Closure);
             (*ret).closure_count_upvalues = count_upvalues as u8;
             ret
@@ -218,7 +229,11 @@ impl Closure {
     }
     pub unsafe fn luaf_newlclosure(state: *mut State, mut count_upvalues: i32) -> *mut Closure {
         unsafe {
-            let object: *mut Object = luac_newobj(state, TagVariant::ClosureL, Closure::size_lclosure(count_upvalues as usize));
+            let object: *mut Object = luac_newobj(
+                state,
+                TagVariant::ClosureL,
+                Closure::size_lclosure(count_upvalues as usize),
+            );
             let ret: *mut Closure = &mut *(object as *mut Closure);
             (*ret).closure_payload.closurepayload_lprototype = null_mut();
             (*ret).closure_count_upvalues = count_upvalues as u8;
@@ -249,7 +264,11 @@ impl Closure {
                     .add(i as usize);
                 *fresh = upvalue;
                 if (*closure).get_marked() & BLACKBIT != 0 && (*upvalue).get_marked() & WHITEBITS != 0 {
-                    Object::luac_barrier_(state, &mut *(closure as *mut Object), &mut *(upvalue as *mut Object));
+                    Object::luac_barrier_(
+                        state,
+                        &mut *(closure as *mut Object),
+                        &mut *(upvalue as *mut Object),
+                    );
                 }
             }
         }

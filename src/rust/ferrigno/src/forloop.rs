@@ -10,7 +10,11 @@ pub unsafe fn forlimit(state: *mut State, initial: i64, lim: *const TValue, p: *
                 flim = n;
                 1
             } else {
-                if (*lim).to_number(&mut flim) { 1 } else { 0 }
+                if (*lim).to_number(&mut flim) {
+                    1
+                } else {
+                    0
+                }
             } == 0
             {
                 luag_forerror(state, lim, c"limit".as_ptr());
@@ -27,7 +31,11 @@ pub unsafe fn forlimit(state: *mut State, initial: i64, lim: *const TValue, p: *
                 *p = -(MAXIMUM_SIZE as i64) - 1_i64;
             }
         }
-        if step > 0 { (initial > *p) as i32 } else { (initial < *p) as i32 }
+        if step > 0 {
+            (initial > *p) as i32
+        } else {
+            (initial < *p) as i32
+        }
     }
 }
 pub unsafe fn forprep(state: *mut State, ra: *mut TValue) -> i32 {
@@ -64,7 +72,11 @@ pub unsafe fn forprep(state: *mut State, ra: *mut TValue) -> i32 {
                 limit = n;
                 1
             } else {
-                if (*plimit).to_number(&mut limit) { 1 } else { 0 }
+                if (*plimit).to_number(&mut limit) {
+                    1
+                } else {
+                    0
+                }
             }) == 0
             {
                 luag_forerror(state, plimit, c"limit".as_ptr());
@@ -73,7 +85,11 @@ pub unsafe fn forprep(state: *mut State, ra: *mut TValue) -> i32 {
                 step = n;
                 1
             } else {
-                if (*pstep).to_number(&mut step) { 1 } else { 0 }
+                if (*pstep).to_number(&mut step) {
+                    1
+                } else {
+                    0
+                }
             }) == 0
             {
                 luag_forerror(state, pstep, c"step".as_ptr());
@@ -82,7 +98,11 @@ pub unsafe fn forprep(state: *mut State, ra: *mut TValue) -> i32 {
                 init = n;
                 1
             } else {
-                if (*pinit).to_number(&mut init) { 1 } else { 0 }
+                if (*pinit).to_number(&mut init) {
+                    1
+                } else {
+                    0
+                }
             }) == 0
             {
                 luag_forerror(state, pinit, c"initial value".as_ptr());
@@ -90,7 +110,12 @@ pub unsafe fn forprep(state: *mut State, ra: *mut TValue) -> i32 {
             if step == 0.0 {
                 luag_runerror(state, c"'for' step is zero".as_ptr(), &[]);
             }
-            if if (0.0) < step { (limit < init) as i32 } else { (init < limit) as i32 } != 0 {
+            if if (0.0) < step {
+                (limit < init) as i32
+            } else {
+                (init < limit) as i32
+            } != 0
+            {
                 return 1;
             } else {
                 (*plimit).set_number(limit);
@@ -108,7 +133,12 @@ pub unsafe fn floatforloop(ra: *mut TValue) -> i32 {
         let limit: f64 = (*ra.add(1)).as_number().unwrap();
         let mut index: f64 = (*ra).as_number().unwrap();
         index += step;
-        if if (0.0) < step { (index <= limit) as i32 } else { (limit <= index) as i32 } != 0 {
+        if if (0.0) < step {
+            (index <= limit) as i32
+        } else {
+            (limit <= index) as i32
+        } != 0
+        {
             (*ra).set_number(index);
             (*ra.add(3)).set_number(index);
             1

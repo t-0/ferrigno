@@ -44,7 +44,10 @@ impl StreamWriter {
     }
     pub unsafe fn str_dump(state: *mut State) -> i32 {
         unsafe {
-            let mut stream_writer = StreamWriter { streamwriter_is_initialized: false, streamwriter_buffer: Buffer::new() };
+            let mut stream_writer = StreamWriter {
+                streamwriter_is_initialized: false,
+                streamwriter_buffer: Buffer::new(),
+            };
             stream_writer.dump(state)
         }
     }

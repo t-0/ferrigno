@@ -10,7 +10,10 @@ struct CloseProtected {
 }
 impl TDefaultNew for CloseProtected {
     fn new() -> Self {
-        CloseProtected { closeprotected_level: null_mut(), closeprotected_status: Status::OK }
+        CloseProtected {
+            closeprotected_level: null_mut(),
+            closeprotected_status: Status::OK,
+        }
     }
 }
 impl CloseProtected {

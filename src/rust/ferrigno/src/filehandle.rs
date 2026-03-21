@@ -37,12 +37,12 @@ impl FileHandle {
         }
         let mut buf = [0u8; 1];
         match self.filehandle_file.read(&mut buf) {
-            | Ok(1) => Some(buf[0]),
-            | Ok(_) => None,
-            | Err(_) => {
+            Ok(1) => Some(buf[0]),
+            Ok(_) => None,
+            Err(_) => {
                 self.filehandle_had_error = true;
                 None
-            },
+            }
         }
     }
 
@@ -53,8 +53,8 @@ impl FileHandle {
     /// Write data through the user-space write buffer.
     pub fn write_buffered(&mut self, data: &[u8]) -> bool {
         match &self.filehandle_write_buffer_mode {
-            | WriteBufferMode::No => self.filehandle_file.write_all(data).is_ok(),
-            | WriteBufferMode::Full(cap) => {
+            WriteBufferMode::No => self.filehandle_file.write_all(data).is_ok(),
+            WriteBufferMode::Full(cap) => {
                 let cap = *cap;
                 self.filehandle_write_buffer.extend_from_slice(data);
                 if self.filehandle_write_buffer.len() >= cap {
@@ -63,8 +63,8 @@ impl FileHandle {
                 } else {
                     true
                 }
-            },
-            | WriteBufferMode::Line => {
+            }
+            WriteBufferMode::Line => {
                 self.filehandle_write_buffer.extend_from_slice(data);
                 if self.filehandle_write_buffer.contains(&b'\n') {
                     let buf = std::mem::take(&mut self.filehandle_write_buffer);
@@ -72,7 +72,7 @@ impl FileHandle {
                 } else {
                     true
                 }
-            },
+            }
         }
     }
 

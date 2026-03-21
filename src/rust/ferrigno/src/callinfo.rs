@@ -56,9 +56,11 @@ impl CallInfo {
     pub unsafe fn currentpc(callinfo: *mut CallInfo) -> i32 {
         unsafe {
             ((*callinfo).callinfo_u.l.saved_program_counter).offset_from(
-                (*(*(*(*callinfo).callinfo_function.stkidrel_pointer).as_closure().unwrap())
-                    .closure_payload
-                    .closurepayload_lprototype)
+                (*(*(*(*callinfo).callinfo_function.stkidrel_pointer)
+                    .as_closure()
+                    .unwrap())
+                .closure_payload
+                .closurepayload_lprototype)
                     .prototype_code
                     .vectort_pointer,
             ) as i32
@@ -68,9 +70,11 @@ impl CallInfo {
     pub unsafe fn getcurrentline(callinfo: *mut CallInfo) -> i32 {
         unsafe {
             luag_getfuncline(
-                (*(*(*callinfo).callinfo_function.stkidrel_pointer).as_closure().unwrap())
-                    .closure_payload
-                    .closurepayload_lprototype,
+                (*(*(*callinfo).callinfo_function.stkidrel_pointer)
+                    .as_closure()
+                    .unwrap())
+                .closure_payload
+                .closurepayload_lprototype,
                 CallInfo::currentpc(callinfo),
             )
         }
@@ -98,9 +102,11 @@ impl CallInfo {
                     return CallInfo::findvararg(callinfo, n, position);
                 } else {
                     name = luaf_getlocalname(
-                        (*(*(*callinfo).callinfo_function.stkidrel_pointer).as_closure().unwrap())
-                            .closure_payload
-                            .closurepayload_lprototype,
+                        (*(*(*callinfo).callinfo_function.stkidrel_pointer)
+                            .as_closure()
+                            .unwrap())
+                        .closure_payload
+                        .closurepayload_lprototype,
                         n,
                         CallInfo::currentpc(callinfo),
                     );
@@ -110,7 +116,9 @@ impl CallInfo {
                 let limit: *mut TValue = if callinfo == (*state).interpreter_callinfo {
                     (*state).interpreter_top.stkidrel_pointer
                 } else {
-                    (*(*callinfo).callinfo_next).callinfo_function.stkidrel_pointer
+                    (*(*callinfo).callinfo_next)
+                        .callinfo_function
+                        .stkidrel_pointer
                 };
                 if limit.offset_from(base) as i64 >= n as i64 && n > 0 {
                     name = if (*callinfo).callinfo_callstatus as i32 & CALLSTATUS_LUA == 0 {
@@ -130,9 +138,11 @@ impl CallInfo {
     }
     pub unsafe fn findvararg(callinfo: *mut CallInfo, n: i32, position: *mut *mut TValue) -> *const i8 {
         unsafe {
-            if (*(*(*(*callinfo).callinfo_function.stkidrel_pointer).as_closure().unwrap())
-                .closure_payload
-                .closurepayload_lprototype)
+            if (*(*(*(*callinfo).callinfo_function.stkidrel_pointer)
+                .as_closure()
+                .unwrap())
+            .closure_payload
+            .closurepayload_lprototype)
                 .prototype_isvariablearguments
             {
                 let nextra = (*callinfo).callinfo_u.l.count_extra_arguments;
@@ -166,9 +176,11 @@ impl CallInfo {
             } else if (*callinfo).callinfo_callstatus as i32 & CALLSTATUS_LUA == 0 {
                 funcnamefromcode(
                     state,
-                    (*(*(*callinfo).callinfo_function.stkidrel_pointer).as_closure().unwrap())
-                        .closure_payload
-                        .closurepayload_lprototype,
+                    (*(*(*callinfo).callinfo_function.stkidrel_pointer)
+                        .as_closure()
+                        .unwrap())
+                    .closure_payload
+                    .closurepayload_lprototype,
                     CallInfo::currentpc(callinfo),
                     name,
                 )
@@ -196,7 +208,9 @@ impl CallInfo {
     }
     pub unsafe fn getupvalname(callinfo: *mut CallInfo, tvalue: *const TValue, name: *mut *const i8) -> *const i8 {
         unsafe {
-            let closure: *mut Closure = (*(*callinfo).callinfo_function.stkidrel_pointer).as_closure().unwrap();
+            let closure: *mut Closure = (*(*callinfo).callinfo_function.stkidrel_pointer)
+                .as_closure()
+                .unwrap();
             for it in 0..(*closure).closure_count_upvalues {
                 if std::ptr::eq(
                     (**((*closure).closure_upvalues)
@@ -207,7 +221,10 @@ impl CallInfo {
                     .upvaluea_p,
                     tvalue,
                 ) {
-                    *name = upvalname((*closure).closure_payload.closurepayload_lprototype, it as i32);
+                    *name = upvalname(
+                        (*closure).closure_payload.closurepayload_lprototype,
+                        it as i32,
+                    );
                     return TagType::STRING_UPVALUE;
                 }
             }

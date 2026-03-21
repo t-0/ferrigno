@@ -22,7 +22,11 @@ enum TomlValue {
 
 impl<'a> Parser<'a> {
     fn new(src: &'a [u8]) -> Self {
-        Parser { src, pos: 0, line: 1 }
+        Parser {
+            src,
+            pos: 0,
+            line: 1,
+        }
     }
 
     fn peek(&self) -> Option<u8> {
@@ -59,11 +63,11 @@ impl<'a> Parser<'a> {
     fn skip_whitespace_and_newlines(&mut self) {
         loop {
             match self.peek() {
-                | Some(b' ') | Some(b'\t') | Some(b'\r') | Some(b'\n') => {
+                Some(b' ') | Some(b'\t') | Some(b'\r') | Some(b'\n') => {
                     self.advance();
-                },
-                | Some(b'#') => self.skip_comment(),
-                | _ => break,
+                }
+                Some(b'#') => self.skip_comment(),
+                _ => break,
             }
         }
     }
@@ -78,20 +82,23 @@ impl<'a> Parser<'a> {
 
     fn expect(&mut self, expected: u8) -> Result<(), String> {
         match self.advance() {
-            | Some(b) if b == expected => Ok(()),
-            | Some(b) => Err(format!(
+            Some(b) if b == expected => Ok(()),
+            Some(b) => Err(format!(
                 "line {}: expected '{}' got '{}'",
                 self.line, expected as char, b as char
             )),
-            | None => Err(format!("line {}: expected '{}' got EOF", self.line, expected as char)),
+            None => Err(format!(
+                "line {}: expected '{}' got EOF",
+                self.line, expected as char
+            )),
         }
     }
 
     fn parse_key_segment(&mut self) -> Result<Vec<u8>, String> {
         match self.peek() {
-            | Some(b'"') => self.parse_basic_string(),
-            | Some(b'\'') => self.parse_literal_string(),
-            | Some(b) if is_bare_key_char(b) => {
+            Some(b'"') => self.parse_basic_string(),
+            Some(b'\'') => self.parse_literal_string(),
+            Some(b) if is_bare_key_char(b) => {
                 let mut key = Vec::new();
                 while let Some(b) = self.peek() {
                     if is_bare_key_char(b) {
@@ -102,9 +109,12 @@ impl<'a> Parser<'a> {
                     }
                 }
                 Ok(key)
-            },
-            | Some(b) => Err(format!("line {}: invalid key character '{}'", self.line, b as char)),
-            | None => Err(format!("line {}: unexpected EOF in key", self.line)),
+            }
+            Some(b) => Err(format!(
+                "line {}: invalid key character '{}'",
+                self.line, b as char
+            )),
+            None => Err(format!("line {}: unexpected EOF in key", self.line)),
         }
     }
 
@@ -136,11 +146,11 @@ impl<'a> Parser<'a> {
         let mut out = Vec::new();
         loop {
             match self.advance() {
-                | None => return Err(format!("line {}: unterminated string", self.line)),
-                | Some(b'"') => break,
-                | Some(b'\\') => out.extend(self.parse_escape()?),
-                | Some(b'\n') | Some(b'\r') => return Err(format!("line {}: newline in basic string", self.line)),
-                | Some(b) => out.push(b),
+                None => return Err(format!("line {}: unterminated string", self.line)),
+                Some(b'"') => break,
+                Some(b'\\') => out.extend(self.parse_escape()?),
+                Some(b'\n') | Some(b'\r') => return Err(format!("line {}: newline in basic string", self.line)),
+                Some(b) => out.push(b),
             }
         }
         Ok(out)
@@ -161,17 +171,28 @@ impl<'a> Parser<'a> {
                 break;
             }
             match self.advance() {
-                | None => return Err(format!("line {}: unterminated multi-line string", self.line)),
-                | Some(b'\\') => {
-                    if matches!(self.peek(), Some(b' ') | Some(b'\t') | Some(b'\n') | Some(b'\r')) {
-                        while matches!(self.peek(), Some(b' ') | Some(b'\t') | Some(b'\n') | Some(b'\r')) {
+                None => {
+                    return Err(format!(
+                        "line {}: unterminated multi-line string",
+                        self.line
+                    ))
+                }
+                Some(b'\\') => {
+                    if matches!(
+                        self.peek(),
+                        Some(b' ') | Some(b'\t') | Some(b'\n') | Some(b'\r')
+                    ) {
+                        while matches!(
+                            self.peek(),
+                            Some(b' ') | Some(b'\t') | Some(b'\n') | Some(b'\r')
+                        ) {
                             self.advance();
                         }
                     } else {
                         out.extend(self.parse_escape()?);
                     }
-                },
-                | Some(b) => out.push(b),
+                }
+                Some(b) => out.push(b),
             }
         }
         Ok(out)
@@ -179,23 +200,26 @@ impl<'a> Parser<'a> {
 
     fn parse_escape(&mut self) -> Result<Vec<u8>, String> {
         match self.advance() {
-            | Some(b'b') => Ok(vec![0x08]),
-            | Some(b't') => Ok(vec![b'\t']),
-            | Some(b'n') => Ok(vec![b'\n']),
-            | Some(b'f') => Ok(vec![0x0C]),
-            | Some(b'r') => Ok(vec![b'\r']),
-            | Some(b'"') => Ok(vec![b'"']),
-            | Some(b'\\') => Ok(vec![b'\\']),
-            | Some(b'u') => {
+            Some(b'b') => Ok(vec![0x08]),
+            Some(b't') => Ok(vec![b'\t']),
+            Some(b'n') => Ok(vec![b'\n']),
+            Some(b'f') => Ok(vec![0x0C]),
+            Some(b'r') => Ok(vec![b'\r']),
+            Some(b'"') => Ok(vec![b'"']),
+            Some(b'\\') => Ok(vec![b'\\']),
+            Some(b'u') => {
                 let cp = self.parse_hex_n(4)?;
                 Ok(encode_utf8(cp))
-            },
-            | Some(b'U') => {
+            }
+            Some(b'U') => {
                 let cp = self.parse_hex_n(8)?;
                 Ok(encode_utf8(cp))
-            },
-            | Some(b) => Err(format!("line {}: invalid escape '\\{}'", self.line, b as char)),
-            | None => Err(format!("line {}: EOF in escape", self.line)),
+            }
+            Some(b) => Err(format!(
+                "line {}: invalid escape '\\{}'",
+                self.line, b as char
+            )),
+            None => Err(format!("line {}: EOF in escape", self.line)),
         }
     }
 
@@ -203,9 +227,14 @@ impl<'a> Parser<'a> {
         let mut val: u32 = 0;
         for _ in 0..n {
             match self.advance() {
-                | Some(b) if b.is_ascii_hexdigit() => val = val * 16 + hex_digit(b) as u32,
-                | Some(b) => return Err(format!("line {}: invalid hex digit '{}'", self.line, b as char)),
-                | None => return Err(format!("line {}: EOF in unicode escape", self.line)),
+                Some(b) if b.is_ascii_hexdigit() => val = val * 16 + hex_digit(b) as u32,
+                Some(b) => {
+                    return Err(format!(
+                        "line {}: invalid hex digit '{}'",
+                        self.line, b as char
+                    ))
+                }
+                None => return Err(format!("line {}: EOF in unicode escape", self.line)),
             }
         }
         Ok(val)
@@ -224,10 +253,10 @@ impl<'a> Parser<'a> {
         let mut out = Vec::new();
         loop {
             match self.advance() {
-                | None => return Err(format!("line {}: unterminated literal string", self.line)),
-                | Some(b'\'') => break,
-                | Some(b'\n') | Some(b'\r') => return Err(format!("line {}: newline in literal string", self.line)),
-                | Some(b) => out.push(b),
+                None => return Err(format!("line {}: unterminated literal string", self.line)),
+                Some(b'\'') => break,
+                Some(b'\n') | Some(b'\r') => return Err(format!("line {}: newline in literal string", self.line)),
+                Some(b) => out.push(b),
             }
         }
         Ok(out)
@@ -243,8 +272,13 @@ impl<'a> Parser<'a> {
                 break;
             }
             match self.advance() {
-                | None => return Err(format!("line {}: unterminated multi-line literal string", self.line)),
-                | Some(b) => out.push(b),
+                None => {
+                    return Err(format!(
+                        "line {}: unterminated multi-line literal string",
+                        self.line
+                    ))
+                }
+                Some(b) => out.push(b),
             }
         }
         Ok(out)
@@ -261,31 +295,35 @@ impl<'a> Parser<'a> {
                 self.advance();
             }
             return match &self.src[start..self.pos] {
-                | b"inf" | b"+inf" => Ok(TomlValue::Float(f64::INFINITY)),
-                | b"-inf" => Ok(TomlValue::Float(f64::NEG_INFINITY)),
-                | b"nan" | b"+nan" | b"-nan" => Ok(TomlValue::Float(f64::NAN)),
-                | tok => Err(format!("line {}: invalid token '{}'", self.line, String::from_utf8_lossy(tok))),
+                b"inf" | b"+inf" => Ok(TomlValue::Float(f64::INFINITY)),
+                b"-inf" => Ok(TomlValue::Float(f64::NEG_INFINITY)),
+                b"nan" | b"+nan" | b"-nan" => Ok(TomlValue::Float(f64::NAN)),
+                tok => Err(format!(
+                    "line {}: invalid token '{}'",
+                    self.line,
+                    String::from_utf8_lossy(tok)
+                )),
             };
         }
         // 0x / 0o / 0b
         if self.peek() == Some(b'0') {
             match self.peek2() {
-                | Some(b'x') => {
+                Some(b'x') => {
                     self.advance();
                     self.advance();
                     return self.parse_int_base(16);
-                },
-                | Some(b'o') => {
+                }
+                Some(b'o') => {
                     self.advance();
                     self.advance();
                     return self.parse_int_base(8);
-                },
-                | Some(b'b') => {
+                }
+                Some(b'b') => {
                     self.advance();
                     self.advance();
                     return self.parse_int_base(2);
-                },
-                | _ => {},
+                }
+                _ => {}
             }
         }
         // collect the rest
@@ -334,10 +372,10 @@ impl<'a> Parser<'a> {
                 continue;
             }
             let digit = match base {
-                | 16 if b.is_ascii_hexdigit() => hex_digit(b) as i64,
-                | 8 if matches!(b, b'0'..=b'7') => (b - b'0') as i64,
-                | 2 if matches!(b, b'0' | b'1') => (b - b'0') as i64,
-                | _ => break,
+                16 if b.is_ascii_hexdigit() => hex_digit(b) as i64,
+                8 if matches!(b, b'0'..=b'7') => (b - b'0') as i64,
+                2 if matches!(b, b'0' | b'1') => (b - b'0') as i64,
+                _ => break,
             };
             val = val * base + digit;
             had = true;
@@ -352,21 +390,24 @@ impl<'a> Parser<'a> {
     fn parse_value(&mut self) -> Result<TomlValue, String> {
         self.skip_whitespace();
         match self.peek() {
-            | Some(b'"') => Ok(TomlValue::String(self.parse_basic_string()?)),
-            | Some(b'\'') => Ok(TomlValue::String(self.parse_literal_string()?)),
-            | Some(b't') => {
+            Some(b'"') => Ok(TomlValue::String(self.parse_basic_string()?)),
+            Some(b'\'') => Ok(TomlValue::String(self.parse_literal_string()?)),
+            Some(b't') => {
                 self.expect_bytes(b"true")?;
                 Ok(TomlValue::Bool(true))
-            },
-            | Some(b'f') => {
+            }
+            Some(b'f') => {
                 self.expect_bytes(b"false")?;
                 Ok(TomlValue::Bool(false))
-            },
-            | Some(b'[') => self.parse_array(),
-            | Some(b'{') => self.parse_inline_table(),
-            | Some(b) if b.is_ascii_digit() || matches!(b, b'+' | b'-' | b'i' | b'n') => self.parse_number_or_date(),
-            | Some(b) => Err(format!("line {}: unexpected character '{}' in value", self.line, b as char)),
-            | None => Err(format!("line {}: unexpected EOF in value", self.line)),
+            }
+            Some(b'[') => self.parse_array(),
+            Some(b'{') => self.parse_inline_table(),
+            Some(b) if b.is_ascii_digit() || matches!(b, b'+' | b'-' | b'i' | b'n') => self.parse_number_or_date(),
+            Some(b) => Err(format!(
+                "line {}: unexpected character '{}' in value",
+                self.line, b as char
+            )),
+            None => Err(format!("line {}: unexpected EOF in value", self.line)),
         }
     }
 
@@ -389,15 +430,20 @@ impl<'a> Parser<'a> {
             items.push(self.parse_value()?);
             self.skip_whitespace_and_newlines();
             match self.peek() {
-                | Some(b',') => {
+                Some(b',') => {
                     self.advance();
-                },
-                | Some(b']') => {
+                }
+                Some(b']') => {
                     self.advance();
                     break;
-                },
-                | Some(b) => return Err(format!("line {}: expected ',' or ']' got '{}'", self.line, b as char)),
-                | None => return Err(format!("line {}: EOF in array", self.line)),
+                }
+                Some(b) => {
+                    return Err(format!(
+                        "line {}: expected ',' or ']' got '{}'",
+                        self.line, b as char
+                    ))
+                }
+                None => return Err(format!("line {}: EOF in array", self.line)),
             }
         }
         Ok(TomlValue::Array(items))
@@ -422,15 +468,20 @@ impl<'a> Parser<'a> {
             pairs.push(pair);
             self.skip_whitespace();
             match self.peek() {
-                | Some(b',') => {
+                Some(b',') => {
                     self.advance();
-                },
-                | Some(b'}') => {
+                }
+                Some(b'}') => {
                     self.advance();
                     break;
-                },
-                | Some(b) => return Err(format!("line {}: expected ',' or '}}' got '{}'", self.line, b as char)),
-                | None => return Err(format!("line {}: EOF in inline table", self.line)),
+                }
+                Some(b) => {
+                    return Err(format!(
+                        "line {}: expected ',' or '}}' got '{}'",
+                        self.line, b as char
+                    ))
+                }
+                None => return Err(format!("line {}: EOF in inline table", self.line)),
             }
         }
         Ok(TomlValue::Table(pairs))
@@ -452,10 +503,10 @@ fn is_bare_key_char(b: u8) -> bool {
 
 fn hex_digit(b: u8) -> u8 {
     match b {
-        | b'0'..=b'9' => b - b'0',
-        | b'a'..=b'f' => b - b'a' + 10,
-        | b'A'..=b'F' => b - b'A' + 10,
-        | _ => 0,
+        b'0'..=b'9' => b - b'0',
+        b'a'..=b'f' => b - b'a' + 10,
+        b'A'..=b'F' => b - b'A' + 10,
+        _ => 0,
     }
 }
 
@@ -498,7 +549,11 @@ fn get_or_create_table<'a>(pairs: &'a mut Vec<(Vec<u8>, TomlValue)>, key: &[u8])
         .position(|(k, v)| k.as_slice() == key && matches!(v, TomlValue::Table(_)))
         .unwrap();
     // Pass 3: only mutable borrow in scope; its lifetime is 'a.
-    if let TomlValue::Table(t) = &mut pairs[idx].1 { t } else { unreachable!() }
+    if let TomlValue::Table(t) = &mut pairs[idx].1 {
+        t
+    } else {
+        unreachable!()
+    }
 }
 
 fn ensure_table(root: &mut Vec<(Vec<u8>, TomlValue)>, path: &[Vec<u8>]) -> Result<(), String> {
@@ -515,19 +570,31 @@ fn insert_aot(root: &mut Vec<(Vec<u8>, TomlValue)>, path: &[Vec<u8>]) -> Result<
         cur = get_or_create_table(cur, seg);
     }
     let last = &path[path.len() - 1];
-    if let Some(pair) = cur.iter_mut().find(|(k, _)| k.as_slice() == last.as_slice()) {
+    if let Some(pair) = cur
+        .iter_mut()
+        .find(|(k, _)| k.as_slice() == last.as_slice())
+    {
         if let TomlValue::Array(arr) = &mut pair.1 {
             arr.push(TomlValue::Table(Vec::new()));
             return Ok(());
         }
-        return Err(format!("key '{}' is not an array of tables", String::from_utf8_lossy(last)));
+        return Err(format!(
+            "key '{}' is not an array of tables",
+            String::from_utf8_lossy(last)
+        ));
     }
-    cur.push((last.clone(), TomlValue::Array(vec![TomlValue::Table(Vec::new())])));
+    cur.push((
+        last.clone(),
+        TomlValue::Array(vec![TomlValue::Table(Vec::new())]),
+    ));
     Ok(())
 }
 
 fn insert_into_last_aot(
-    root: &mut Vec<(Vec<u8>, TomlValue)>, aot_path: &[Vec<u8>], key_parts: Vec<Vec<u8>>, val: TomlValue,
+    root: &mut Vec<(Vec<u8>, TomlValue)>,
+    aot_path: &[Vec<u8>],
+    key_parts: Vec<Vec<u8>>,
+    val: TomlValue,
 ) -> Result<(), String> {
     let mut cur = root;
     for seg in &aot_path[..aot_path.len() - 1] {
@@ -542,7 +609,10 @@ fn insert_into_last_aot(
             return insert_at(t, &key_parts, val);
         }
     }
-    Err(format!("array-of-tables '{}' not found", String::from_utf8_lossy(last_seg)))
+    Err(format!(
+        "array-of-tables '{}' not found",
+        String::from_utf8_lossy(last_seg)
+    ))
 }
 
 fn insert_at(root: &mut Vec<(Vec<u8>, TomlValue)>, path: &[Vec<u8>], val: TomlValue) -> Result<(), String> {
@@ -571,13 +641,13 @@ fn parse_document(src: &[u8]) -> Result<Vec<(Vec<u8>, TomlValue)>, String> {
     while p.pos < p.src.len() {
         p.skip_whitespace();
         match p.peek() {
-            | Some(b'#') => {
+            Some(b'#') => {
                 p.skip_comment();
-            },
-            | Some(b'\n') | Some(b'\r') => {
+            }
+            Some(b'\n') | Some(b'\r') => {
                 p.advance();
-            },
-            | Some(b'[') => {
+            }
+            Some(b'[') => {
                 p.advance();
                 if p.peek() == Some(b'[') {
                     p.advance();
@@ -603,8 +673,8 @@ fn parse_document(src: &[u8]) -> Result<Vec<(Vec<u8>, TomlValue)>, String> {
                 if matches!(p.peek(), Some(b'\n') | Some(b'\r')) {
                     p.advance();
                 }
-            },
-            | Some(_) => {
+            }
+            Some(_) => {
                 let key_parts = p.parse_key()?;
                 p.skip_whitespace();
                 p.expect(b'=')?;
@@ -624,8 +694,8 @@ fn parse_document(src: &[u8]) -> Result<Vec<(Vec<u8>, TomlValue)>, String> {
                     full_path.extend_from_slice(&key_parts);
                     insert_at(&mut root, &full_path, val)?;
                 }
-            },
-            | None => break,
+            }
+            None => break,
         }
     }
     Ok(root)
@@ -636,27 +706,27 @@ fn parse_document(src: &[u8]) -> Result<Vec<(Vec<u8>, TomlValue)>, String> {
 unsafe fn push_toml_value(state: *mut State, val: &TomlValue) {
     unsafe {
         match val {
-            | TomlValue::String(s) => {
+            TomlValue::String(s) => {
                 lua_pushlstring(state, s.as_ptr() as *const i8, s.len());
-            },
-            | TomlValue::Integer(i) => {
+            }
+            TomlValue::Integer(i) => {
                 (*state).push_integer(*i);
-            },
-            | TomlValue::Float(f) => {
+            }
+            TomlValue::Float(f) => {
                 (*state).push_number(*f);
-            },
-            | TomlValue::Bool(b) => {
+            }
+            TomlValue::Bool(b) => {
                 (*state).push_boolean(*b);
-            },
-            | TomlValue::Array(items) => {
+            }
+            TomlValue::Array(items) => {
                 (*state).lua_createtable();
                 let tbl = lua_absindex(state, -1);
                 for (i, item) in items.iter().enumerate() {
                     push_toml_value(state, item);
                     lua_rawseti(state, tbl, (i + 1) as i64);
                 }
-            },
-            | TomlValue::Table(pairs) => {
+            }
+            TomlValue::Table(pairs) => {
                 (*state).lua_createtable();
                 let tbl = lua_absindex(state, -1);
                 for (k, v) in pairs {
@@ -664,7 +734,7 @@ unsafe fn push_toml_value(state: *mut State, val: &TomlValue) {
                     push_toml_value(state, v);
                     lua_rawset(state, tbl);
                 }
-            },
+            }
         }
     }
 }
@@ -680,15 +750,15 @@ pub unsafe fn toml_parse(state: *mut State) -> i32 {
         }
         let src = std::slice::from_raw_parts(ptr as *const u8, len);
         match parse_document(src) {
-            | Err(e) => {
+            Err(e) => {
                 (*state).push_nil();
                 lua_pushlstring(state, e.as_ptr() as *const i8, e.len());
                 2
-            },
-            | Ok(pairs) => {
+            }
+            Ok(pairs) => {
                 push_toml_value(state, &TomlValue::Table(pairs));
                 1
-            },
+            }
         }
     }
 }
@@ -716,15 +786,19 @@ unsafe fn is_lua_array(state: *mut State, idx: i32) -> bool {
 }
 
 fn write_toml_key(out: &mut Vec<u8>, key: &[u8]) {
-    if !key.is_empty() && key.iter().all(|&b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_') {
+    if !key.is_empty()
+        && key
+            .iter()
+            .all(|&b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+    {
         out.extend_from_slice(key);
     } else {
         out.push(b'"');
         for &b in key {
             match b {
-                | b'"' => out.extend_from_slice(b"\\\""),
-                | b'\\' => out.extend_from_slice(b"\\\\"),
-                | _ => out.push(b),
+                b'"' => out.extend_from_slice(b"\\\""),
+                b'\\' => out.extend_from_slice(b"\\\\"),
+                _ => out.push(b),
             }
         }
         out.push(b'"');
@@ -736,14 +810,14 @@ unsafe fn serialize_value(state: *mut State, idx: i32, out: &mut Vec<u8>) -> Res
     unsafe {
         let idx = lua_absindex(state, idx);
         match lua_type(state, idx) {
-            | Some(TagType::Boolean) => {
+            Some(TagType::Boolean) => {
                 if lua_toboolean(state, idx) {
                     out.extend_from_slice(b"true");
                 } else {
                     out.extend_from_slice(b"false");
                 }
-            },
-            | Some(TagType::Numeric) => {
+            }
+            Some(TagType::Numeric) => {
                 if lua_isinteger(state, idx) {
                     let i = lua_tointegerx(state, idx, std::ptr::null_mut());
                     out.extend_from_slice(i.to_string().as_bytes());
@@ -765,29 +839,29 @@ unsafe fn serialize_value(state: *mut State, idx: i32, out: &mut Vec<u8>) -> Res
                         }
                     }
                 }
-            },
-            | Some(TagType::String) => {
+            }
+            Some(TagType::String) => {
                 let mut slen: usize = 0;
                 let sptr = lua_tolstring(state, idx, &mut slen);
                 let s = std::slice::from_raw_parts(sptr as *const u8, slen);
                 out.push(b'"');
                 for &b in s {
                     match b {
-                        | b'"' => out.extend_from_slice(b"\\\""),
-                        | b'\\' => out.extend_from_slice(b"\\\\"),
-                        | b'\n' => out.extend_from_slice(b"\\n"),
-                        | b'\r' => out.extend_from_slice(b"\\r"),
-                        | b'\t' => out.extend_from_slice(b"\\t"),
-                        | 0x00..=0x1F | 0x7F => {
+                        b'"' => out.extend_from_slice(b"\\\""),
+                        b'\\' => out.extend_from_slice(b"\\\\"),
+                        b'\n' => out.extend_from_slice(b"\\n"),
+                        b'\r' => out.extend_from_slice(b"\\r"),
+                        b'\t' => out.extend_from_slice(b"\\t"),
+                        0x00..=0x1F | 0x7F => {
                             let esc = format!("\\u{:04X}", b);
                             out.extend_from_slice(esc.as_bytes());
-                        },
-                        | _ => out.push(b),
+                        }
+                        _ => out.push(b),
                     }
                 }
                 out.push(b'"');
-            },
-            | Some(TagType::Table) => {
+            }
+            Some(TagType::Table) => {
                 if is_lua_array(state, idx) {
                     out.push(b'[');
                     let n = get_length_raw(state, idx);
@@ -824,10 +898,13 @@ unsafe fn serialize_value(state: *mut State, idx: i32, out: &mut Vec<u8>) -> Res
                     }
                     out.push(b'}');
                 }
-            },
-            | tt => {
-                return Err(format!("toml.stringify: cannot serialize type {:?}", tt.map(|t| t as u8)));
-            },
+            }
+            tt => {
+                return Err(format!(
+                    "toml.stringify: cannot serialize type {:?}",
+                    tt.map(|t| t as u8)
+                ));
+            }
         }
         Ok(())
     }
@@ -949,19 +1026,23 @@ unsafe fn is_array_of_tables(state: *mut State, idx: i32) -> bool {
 pub unsafe fn toml_stringify(state: *mut State) -> i32 {
     unsafe {
         if !matches!(lua_type(state, 1), Some(TagType::Table)) {
-            return lual_error(state, c"toml.stringify: expected table argument".as_ptr(), &[]);
+            return lual_error(
+                state,
+                c"toml.stringify: expected table argument".as_ptr(),
+                &[],
+            );
         }
         let mut out: Vec<u8> = Vec::new();
         match emit_table_section(state, 1, &mut out, "") {
-            | Err(e) => {
+            Err(e) => {
                 (*state).push_nil();
                 lua_pushlstring(state, e.as_ptr() as *const i8, e.len());
                 2
-            },
-            | Ok(()) => {
+            }
+            Ok(()) => {
                 lua_pushlstring(state, out.as_ptr() as *const i8, out.len());
                 1
-            },
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::state::{State, close_state, lual_newstate};
+use crate::state::{close_state, lual_newstate, State};
 
 /// RAII owner of a Lua state.
 ///
@@ -13,7 +13,13 @@ impl LuaState {
     pub unsafe fn new() -> Option<LuaState> {
         unsafe {
             let (_global, state) = lual_newstate();
-            if state.is_null() { None } else { Some(LuaState { luastate_state: state }) }
+            if state.is_null() {
+                None
+            } else {
+                Some(LuaState {
+                    luastate_state: state,
+                })
+            }
         }
     }
 

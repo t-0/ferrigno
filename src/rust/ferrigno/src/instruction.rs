@@ -6,7 +6,11 @@ pub const IABX: u32 = 1;
 pub const ISJ: u32 = 4;
 pub const IASBX: u32 = 2;
 pub unsafe fn filter_program_counter(program_counter: i32, jump_target: i32) -> i32 {
-    if program_counter < jump_target { -1 } else { program_counter }
+    if program_counter < jump_target {
+        -1
+    } else {
+        program_counter
+    }
 }
 const MAX_JUMP_CHAIN: i32 = 100;
 pub unsafe fn final_target(code: *mut u32, mut index: i32) -> i32 {

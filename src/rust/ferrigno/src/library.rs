@@ -246,7 +246,12 @@ pub unsafe fn lual_openselectedlibs(state: *mut State, load: i32, preload: i32) 
         let mut mask: i32 = 1;
         for lib in &STDLIBS {
             if load & mask != 0 {
-                lual_requiref(state, lib.registeredfunction_name, lib.registeredfunction_function, 1);
+                lual_requiref(
+                    state,
+                    lib.registeredfunction_name,
+                    lib.registeredfunction_function,
+                    1,
+                );
                 lua_settop(state, -2);
             } else if preload & mask != 0 {
                 lua_pushcclosure(state, lib.registeredfunction_function, 0);
@@ -258,7 +263,12 @@ pub unsafe fn lual_openselectedlibs(state: *mut State, load: i32, preload: i32) 
         // Load custom (non-standard) libraries when load has all bits set
         if load == !0 {
             for it in &LOADED_FUNCTIONS[10..] {
-                lual_requiref(state, it.registeredfunction_name, it.registeredfunction_function, 1);
+                lual_requiref(
+                    state,
+                    it.registeredfunction_name,
+                    it.registeredfunction_function,
+                    1,
+                );
                 lua_settop(state, -2);
             }
         }

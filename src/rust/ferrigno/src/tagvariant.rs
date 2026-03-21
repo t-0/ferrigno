@@ -76,18 +76,18 @@ impl TagVariant {
     }
     pub const fn to_tag_type(&self) -> TagType {
         match *self as u8 & 0x0F {
-            | 0x00 => TagType::Nil,
-            | 0x01 => TagType::Boolean,
-            | 0x02 => TagType::Pointer,
-            | 0x03 => TagType::Numeric,
-            | 0x04 => TagType::String,
-            | 0x05 => TagType::Table,
-            | 0x06 => TagType::Closure,
-            | 0x07 => TagType::User,
-            | 0x08 => TagType::State,
-            | 0x09 => TagType::UpValue,
-            | 0x0A => TagType::Prototype,
-            | _ => TagType::DeadKey,
+            0x00 => TagType::Nil,
+            0x01 => TagType::Boolean,
+            0x02 => TagType::Pointer,
+            0x03 => TagType::Numeric,
+            0x04 => TagType::String,
+            0x05 => TagType::Table,
+            0x06 => TagType::Closure,
+            0x07 => TagType::User,
+            0x08 => TagType::State,
+            0x09 => TagType::UpValue,
+            0x0A => TagType::Prototype,
+            _ => TagType::DeadKey,
         }
     }
 }

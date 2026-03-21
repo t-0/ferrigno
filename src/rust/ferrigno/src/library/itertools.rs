@@ -10,11 +10,17 @@ unsafe fn it_range(state: *mut State) -> i32 {
     unsafe {
         let nargs = (*state).get_top();
         let (start, stop, step) = match nargs {
-            | 1 => (1, lual_checkinteger(state, 1), 1i64),
-            | 2 => (lual_checkinteger(state, 1), lual_checkinteger(state, 2), 1),
-            | _ => (lual_checkinteger(state, 1), lual_checkinteger(state, 2), lual_checkinteger(state, 3)),
+            1 => (1, lual_checkinteger(state, 1), 1i64),
+            2 => (lual_checkinteger(state, 1), lual_checkinteger(state, 2), 1),
+            _ => (
+                lual_checkinteger(state, 1),
+                lual_checkinteger(state, 2),
+                lual_checkinteger(state, 3),
+            ),
         };
-        if step == 0 { return lual_error(state, c"step cannot be zero".as_ptr(), &[]); }
+        if step == 0 {
+            return lual_error(state, c"step cannot be zero".as_ptr(), &[]);
+        }
         (*state).lua_createtable();
         let mut j: i64 = 1;
         let mut i = start;
@@ -70,9 +76,19 @@ unsafe fn it_slice(state: *mut State) -> i32 {
         let len = get_length_raw(state, 1) as i64;
         let nargs = (*state).get_top();
         let start = lual_checkinteger(state, 2).max(1);
-        let stop = if nargs >= 3 { lual_checkinteger(state, 3).min(len) } else { len };
-        let step = if nargs >= 4 { lual_checkinteger(state, 4) } else { 1 };
-        if step == 0 { return lual_error(state, c"step cannot be zero".as_ptr(), &[]); }
+        let stop = if nargs >= 3 {
+            lual_checkinteger(state, 3).min(len)
+        } else {
+            len
+        };
+        let step = if nargs >= 4 {
+            lual_checkinteger(state, 4)
+        } else {
+            1
+        };
+        if step == 0 {
+            return lual_error(state, c"step cannot be zero".as_ptr(), &[]);
+        }
         (*state).lua_createtable();
         let mut j: i64 = 1;
         let mut i = start;
@@ -98,7 +114,10 @@ unsafe fn it_takewhile(state: *mut State) -> i32 {
             lua_pushvalue(state, 1);
             lua_rawgeti(state, 2, i);
             (*state).lua_callk(1, 1, 0, None);
-            if !lua_toboolean(state, -1) { lua_settop(state, -2); break; }
+            if !lua_toboolean(state, -1) {
+                lua_settop(state, -2);
+                break;
+            }
             lua_settop(state, -2);
             lua_rawgeti(state, 2, i);
             lua_rawseti(state, -2, j);
@@ -123,7 +142,10 @@ unsafe fn it_dropwhile(state: *mut State) -> i32 {
                 lua_pushvalue(state, 1);
                 lua_rawgeti(state, 2, i);
                 (*state).lua_callk(1, 1, 0, None);
-                if lua_toboolean(state, -1) { lua_settop(state, -2); continue; }
+                if lua_toboolean(state, -1) {
+                    lua_settop(state, -2);
+                    continue;
+                }
                 lua_settop(state, -2);
                 dropping = false;
             }
@@ -185,13 +207,18 @@ unsafe fn it_chain(state: *mut State) -> i32 {
 unsafe fn it_zip(state: *mut State) -> i32 {
     unsafe {
         let nargs = (*state).get_top();
-        if nargs == 0 { (*state).lua_createtable(); return 1; }
+        if nargs == 0 {
+            (*state).lua_createtable();
+            return 1;
+        }
         // find minimum length
         let mut min_len = i64::MAX;
         for arg in 1..=nargs {
             (*state).lual_checktype(arg, TagType::Table);
             let len = get_length_raw(state, arg) as i64;
-            if len < min_len { min_len = len; }
+            if len < min_len {
+                min_len = len;
+            }
         }
         (*state).lua_createtable();
         for i in 1..=min_len {
@@ -210,13 +237,18 @@ unsafe fn it_zip(state: *mut State) -> i32 {
 unsafe fn it_zip_longest(state: *mut State) -> i32 {
     unsafe {
         let nargs = (*state).get_top();
-        if nargs < 2 { (*state).lua_createtable(); return 1; }
+        if nargs < 2 {
+            (*state).lua_createtable();
+            return 1;
+        }
         // arg 1 is fill value, args 2..n are tables
         let mut max_len: i64 = 0;
         for arg in 2..=nargs {
             (*state).lual_checktype(arg, TagType::Table);
             let len = get_length_raw(state, arg) as i64;
-            if len > max_len { max_len = len; }
+            if len > max_len {
+                max_len = len;
+            }
         }
         (*state).lua_createtable();
         for i in 1..=max_len {
@@ -271,9 +303,12 @@ unsafe fn it_accumulate(state: *mut State) -> i32 {
             lua_pushvalue(state, 3); // accumulator
             start = 1;
         } else {
-            if len == 0 { lua_pushvalue(state, result_idx); return 1; }
+            if len == 0 {
+                lua_pushvalue(state, result_idx);
+                return 1;
+            }
             lua_rawgeti(state, 1, 1); // first element as accumulator
-            // save first element in result
+                                      // save first element in result
             lua_pushvalue(state, -1);
             lua_rawseti(state, result_idx, 1);
             start = 2;
@@ -351,7 +386,9 @@ unsafe fn it_batched(state: *mut State) -> i32 {
     unsafe {
         (*state).lual_checktype(1, TagType::Table);
         let n = lual_checkinteger(state, 2);
-        if n <= 0 { return lual_error(state, c"batch size must be positive".as_ptr(), &[]); }
+        if n <= 0 {
+            return lual_error(state, c"batch size must be positive".as_ptr(), &[]);
+        }
         let len = get_length_raw(state, 1) as i64;
         (*state).lua_createtable();
         let mut batch_num: i64 = 1;
@@ -450,7 +487,9 @@ unsafe fn it_combinations(state: *mut State) -> i32 {
         let r = lual_checkinteger(state, 2) as usize;
         let n = get_length_raw(state, 1);
         (*state).lua_createtable();
-        if r > n { return 1; }
+        if r > n {
+            return 1;
+        }
         let result_idx = (*state).get_top();
         let mut indices: Vec<usize> = (0..r).collect();
         let mut out: i64 = 1;
@@ -466,10 +505,15 @@ unsafe fn it_combinations(state: *mut State) -> i32 {
             // advance to next combination
             let mut i = r;
             loop {
-                if i == 0 { lua_pushvalue(state, result_idx); return 1; }
+                if i == 0 {
+                    lua_pushvalue(state, result_idx);
+                    return 1;
+                }
                 i -= 1;
                 indices[i] += 1;
-                if indices[i] <= n - r + i { break; }
+                if indices[i] <= n - r + i {
+                    break;
+                }
             }
             for j in (i + 1)..r {
                 indices[j] = indices[j - 1] + 1;
@@ -485,7 +529,9 @@ unsafe fn it_permutations(state: *mut State) -> i32 {
         let n = get_length_raw(state, 1);
         let r = lual_optinteger(state, 2, n as i64) as usize;
         (*state).lua_createtable();
-        if r > n { return 1; }
+        if r > n {
+            return 1;
+        }
         let result_idx = (*state).get_top();
         let mut indices: Vec<usize> = (0..n).collect();
         let mut cycles: Vec<usize> = (0..r).map(|i| n - i).collect();
@@ -504,7 +550,9 @@ unsafe fn it_permutations(state: *mut State) -> i32 {
                 cycles[i] -= 1;
                 if cycles[i] == 0 {
                     let tmp = indices[i];
-                    for j in i..n - 1 { indices[j] = indices[j + 1]; }
+                    for j in i..n - 1 {
+                        indices[j] = indices[j + 1];
+                    }
                     indices[n - 1] = tmp;
                     cycles[i] = n - i;
                 } else {
@@ -521,7 +569,9 @@ unsafe fn it_permutations(state: *mut State) -> i32 {
                     break;
                 }
             }
-            if !found { break; }
+            if !found {
+                break;
+            }
         }
         lua_pushvalue(state, result_idx);
         1
@@ -536,7 +586,9 @@ unsafe fn it_groupby(state: *mut State) -> i32 {
         let len = get_length_raw(state, 1) as i64;
         (*state).lua_createtable();
         let result_idx = (*state).get_top();
-        if len == 0 { return 1; }
+        if len == 0 {
+            return 1;
+        }
         let mut group_num: i64 = 0;
         let mut group_elem: i64 = 0;
         // prev_key slot: we'll use stack position result_idx + 1
@@ -603,7 +655,7 @@ unsafe fn it_unique(state: *mut State) -> i32 {
             lua_pushvalue(state, -1); // dup for seen check
             if lua_rawget(state, seen_idx) == TagType::Nil {
                 lua_settop(state, -2); // pop nil
-                // mark as seen
+                                       // mark as seen
                 lua_pushvalue(state, -1); // dup value as key
                 (*state).push_boolean(true);
                 lua_rawset(state, seen_idx);
@@ -620,34 +672,105 @@ unsafe fn it_unique(state: *mut State) -> i32 {
 }
 
 const ITERTOOLS_FUNCTIONS: [RegisteredFunction; 22] = [
-    RegisteredFunction { registeredfunction_name: c"range".as_ptr(), registeredfunction_function: Some(it_range as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"rep".as_ptr(), registeredfunction_function: Some(it_rep as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"cycle".as_ptr(), registeredfunction_function: Some(it_cycle as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"slice".as_ptr(), registeredfunction_function: Some(it_slice as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"takewhile".as_ptr(), registeredfunction_function: Some(it_takewhile as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"dropwhile".as_ptr(), registeredfunction_function: Some(it_dropwhile as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"compress".as_ptr(), registeredfunction_function: Some(it_compress as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"chain".as_ptr(), registeredfunction_function: Some(it_chain as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"zip".as_ptr(), registeredfunction_function: Some(it_zip as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"zip_longest".as_ptr(), registeredfunction_function: Some(it_zip_longest as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"enumerate".as_ptr(), registeredfunction_function: Some(it_enumerate as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"accumulate".as_ptr(), registeredfunction_function: Some(it_accumulate as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"pairwise".as_ptr(), registeredfunction_function: Some(it_pairwise as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"flatten".as_ptr(), registeredfunction_function: Some(it_flatten as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"batched".as_ptr(), registeredfunction_function: Some(it_batched as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"reversed".as_ptr(), registeredfunction_function: Some(it_reversed as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"starmap".as_ptr(), registeredfunction_function: Some(it_starmap as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"product".as_ptr(), registeredfunction_function: Some(it_product as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"combinations".as_ptr(), registeredfunction_function: Some(it_combinations as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"permutations".as_ptr(), registeredfunction_function: Some(it_permutations as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"groupby".as_ptr(), registeredfunction_function: Some(it_groupby as unsafe fn(*mut State) -> i32) },
-    RegisteredFunction { registeredfunction_name: c"unique".as_ptr(), registeredfunction_function: Some(it_unique as unsafe fn(*mut State) -> i32) },
+    RegisteredFunction {
+        registeredfunction_name: c"range".as_ptr(),
+        registeredfunction_function: Some(it_range as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"rep".as_ptr(),
+        registeredfunction_function: Some(it_rep as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"cycle".as_ptr(),
+        registeredfunction_function: Some(it_cycle as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"slice".as_ptr(),
+        registeredfunction_function: Some(it_slice as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"takewhile".as_ptr(),
+        registeredfunction_function: Some(it_takewhile as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"dropwhile".as_ptr(),
+        registeredfunction_function: Some(it_dropwhile as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"compress".as_ptr(),
+        registeredfunction_function: Some(it_compress as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"chain".as_ptr(),
+        registeredfunction_function: Some(it_chain as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"zip".as_ptr(),
+        registeredfunction_function: Some(it_zip as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"zip_longest".as_ptr(),
+        registeredfunction_function: Some(it_zip_longest as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"enumerate".as_ptr(),
+        registeredfunction_function: Some(it_enumerate as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"accumulate".as_ptr(),
+        registeredfunction_function: Some(it_accumulate as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"pairwise".as_ptr(),
+        registeredfunction_function: Some(it_pairwise as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"flatten".as_ptr(),
+        registeredfunction_function: Some(it_flatten as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"batched".as_ptr(),
+        registeredfunction_function: Some(it_batched as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"reversed".as_ptr(),
+        registeredfunction_function: Some(it_reversed as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"starmap".as_ptr(),
+        registeredfunction_function: Some(it_starmap as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"product".as_ptr(),
+        registeredfunction_function: Some(it_product as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"combinations".as_ptr(),
+        registeredfunction_function: Some(it_combinations as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"permutations".as_ptr(),
+        registeredfunction_function: Some(it_permutations as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"groupby".as_ptr(),
+        registeredfunction_function: Some(it_groupby as unsafe fn(*mut State) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"unique".as_ptr(),
+        registeredfunction_function: Some(it_unique as unsafe fn(*mut State) -> i32),
+    },
 ];
 
 pub unsafe fn luaopen_itertools(state: *mut State) -> i32 {
     unsafe {
         (*state).lua_createtable();
-        lual_setfuncs(state, ITERTOOLS_FUNCTIONS.as_ptr(), ITERTOOLS_FUNCTIONS.len(), 0);
+        lual_setfuncs(
+            state,
+            ITERTOOLS_FUNCTIONS.as_ptr(),
+            ITERTOOLS_FUNCTIONS.len(),
+            0,
+        );
         1
     }
 }

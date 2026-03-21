@@ -16,12 +16,12 @@ pub unsafe fn validop(op: i32, v1: *mut TValue, v2: *mut TValue) -> i32 {
         const INTEGRAL_DIVIDE: i32 = OperatorBinary::IntegralDivide as i32;
         const MODULUS: i32 = OperatorBinary::Modulus as i32;
         match op {
-            | BITWISE_AND | BITWISE_OR | BITWISE_XOR | SHIFT_LEFT | SHIFT_RIGHT | EQUAL => {
+            BITWISE_AND | BITWISE_OR | BITWISE_XOR | SHIFT_LEFT | SHIFT_RIGHT | EQUAL => {
                 let mut i: i64 = 0;
                 (F2I::Equal.convert_tv_i64(v1, &mut i) != 0 && F2I::Equal.convert_tv_i64(v2, &mut i) != 0) as i32
-            },
-            | DIVIDE | INTEGRAL_DIVIDE | MODULUS => ((*v2).as_float().unwrap() != 0.0) as i32,
-            | _ => 1,
+            }
+            DIVIDE | INTEGRAL_DIVIDE | MODULUS => ((*v2).as_float().unwrap() != 0.0) as i32,
+            _ => 1,
         }
     }
 }

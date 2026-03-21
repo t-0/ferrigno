@@ -85,11 +85,14 @@ pub unsafe fn main_0(argc: i32, argv: *mut *mut i8) -> i32 {
     unsafe {
         crate::lexicalstate::ferrigno_extensions_init();
         let state = match LuaState::new() {
-            | None => {
-                l_message(*argv.add(0), c"cannot create state: not enough memory".as_ptr());
+            None => {
+                l_message(
+                    *argv.add(0),
+                    c"cannot create state: not enough memory".as_ptr(),
+                );
                 return 1;
-            },
-            | Some(s) => s,
+            }
+            Some(s) => s,
         };
         let state = state.state();
         lua_gc(state, GC_STOP, &[]);
@@ -100,6 +103,10 @@ pub unsafe fn main_0(argc: i32, argv: *mut *mut i8) -> i32 {
         let result = lua_toboolean(state, -1);
         report(state, status);
         // state drops here, calling close_state automatically
-        if result && status == Status::OK { 0 } else { 1 }
+        if result && status == Status::OK {
+            0
+        } else {
+            1
+        }
     }
 }

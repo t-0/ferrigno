@@ -26,7 +26,10 @@ impl UpValue {
             if is_open {
                 self.luaf_unlinkupval();
             }
-            (*state).free_memory(self as *mut UpValue as *mut std::ffi::c_void, size_of::<UpValue>());
+            (*state).free_memory(
+                self as *mut UpValue as *mut std::ffi::c_void,
+                size_of::<UpValue>(),
+            );
         }
     }
     pub unsafe fn newupval(state: *mut State, level: *mut TValue, previous: *mut *mut UpValue) -> *mut UpValue {

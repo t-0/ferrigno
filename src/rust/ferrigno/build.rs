@@ -51,7 +51,13 @@ fn main() {
     writeln!(out, "    match name {{").unwrap();
     for (key, _) in &entries {
         let abs_path = lua_dir.join(key);
-        writeln!(out, "        \"{}\" => Some(include_bytes!(\"{}\")),", key, abs_path.display()).unwrap();
+        writeln!(
+            out,
+            "        \"{}\" => Some(include_bytes!(\"{}\")),",
+            key,
+            abs_path.display()
+        )
+        .unwrap();
     }
     writeln!(out, "        _ => None,").unwrap();
     writeln!(out, "    }}").unwrap();

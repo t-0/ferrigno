@@ -29,7 +29,9 @@ impl SParser {
             sparser_dynamicdata: DynamicData::new(),
         };
         ret.sparser_buffer.buffer_loads.initialize();
-        ret.sparser_dynamicdata.dynamicdata_active_variables.initialize();
+        ret.sparser_dynamicdata
+            .dynamicdata_active_variables
+            .initialize();
         ret.sparser_dynamicdata.dynamicdata_goto.initialize();
         ret.sparser_dynamicdata.dynamicdata_labels.initialize();
         ret
@@ -51,7 +53,9 @@ impl SParser {
                     .wrapping_mul(size_of::<LabelDescription>()),
             );
             (*state).free_memory(
-                self.sparser_dynamicdata.dynamicdata_active_variables.vectort_pointer as *mut std::ffi::c_void,
+                self.sparser_dynamicdata
+                    .dynamicdata_active_variables
+                    .vectort_pointer as *mut std::ffi::c_void,
                 self.sparser_dynamicdata
                     .dynamicdata_active_variables
                     .get_size()
@@ -73,7 +77,11 @@ impl SParser {
             } else {
                 checkmode(state, self.sparser_mode, c"text".as_ptr());
                 let closure = luay_parser(
-                    state, &mut self.sparser_zio, &mut self.sparser_buffer, &mut self.sparser_dynamicdata, self.sparser_name,
+                    state,
+                    &mut self.sparser_zio,
+                    &mut self.sparser_buffer,
+                    &mut self.sparser_dynamicdata,
+                    self.sparser_name,
                     character,
                 );
                 Closure::luaf_initupvals(state, closure);
@@ -88,7 +96,11 @@ unsafe fn f_parser(state: *mut State, pointer: *mut std::ffi::c_void) {
     }
 }
 pub unsafe fn do_protected_parser(
-    state: *mut State, name: *const i8, mode: *const i8, reader: Reader, data: *mut std::ffi::c_void,
+    state: *mut State,
+    name: *const i8,
+    mode: *const i8,
+    reader: Reader,
+    data: *mut std::ffi::c_void,
 ) -> Status {
     unsafe {
         let mut sparser = SParser::new(state, name, mode, reader, data);

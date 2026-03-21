@@ -49,7 +49,10 @@ impl DumpState {
         unsafe {
             if self.dumpstate_status == 0 && size > 0 {
                 self.dumpstate_status = (self.dumpstate_write_function).expect("non-null function pointer")(
-                    self.dumpstate_interpreter, pointer, size, self.dumpstate_pointer,
+                    self.dumpstate_interpreter,
+                    pointer,
+                    size,
+                    self.dumpstate_pointer,
                 );
             }
         }
@@ -73,7 +76,10 @@ impl DumpState {
                 }
             }
             buffer[MAX_VARINT_BYTES - 1] |= VARINT_END_BIT;
-            self.dump_block(buffer.as_mut_ptr().add(MAX_VARINT_BYTES).sub(n) as *const std::ffi::c_void, n);
+            self.dump_block(
+                buffer.as_mut_ptr().add(MAX_VARINT_BYTES).sub(n) as *const std::ffi::c_void,
+                n,
+            );
         }
     }
     pub unsafe fn dump_int(&mut self, integer: i32) {
@@ -83,39 +89,66 @@ impl DumpState {
     }
     pub unsafe fn dump_number(&mut self, number: f64) {
         unsafe {
-            self.dump_block(&number as *const f64 as *const std::ffi::c_void, size_of::<f64>());
+            self.dump_block(
+                &number as *const f64 as *const std::ffi::c_void,
+                size_of::<f64>(),
+            );
         }
     }
     pub unsafe fn dump_integer(&mut self, integer: i64) {
         unsafe {
-            self.dump_block(&integer as *const i64 as *const std::ffi::c_void, size_of::<i64>());
+            self.dump_block(
+                &integer as *const i64 as *const std::ffi::c_void,
+                size_of::<i64>(),
+            );
         }
     }
     pub unsafe fn dump_header(&mut self) {
         unsafe {
-            self.dump_block(DumpState::LUA_SIGNATURE as *const std::ffi::c_void, (size_of::<[i8; 5]>()) - 1);
+            self.dump_block(
+                DumpState::LUA_SIGNATURE as *const std::ffi::c_void,
+                (size_of::<[i8; 5]>()) - 1,
+            );
             self.dump_byte(DumpState::LUAC_VERSION);
             self.dump_byte(DumpState::LUAC_FORMAT);
-            self.dump_block(DumpState::LUAC_DATA as *const std::ffi::c_void, (size_of::<[i8; 7]>()) - 1);
+            self.dump_block(
+                DumpState::LUAC_DATA as *const std::ffi::c_void,
+                (size_of::<[i8; 7]>()) - 1,
+            );
             let int_val: i32 = DumpState::LUAC_INT;
             self.dump_byte(size_of::<i32>() as u8);
-            self.dump_block(&int_val as *const i32 as *const std::ffi::c_void, size_of::<i32>());
+            self.dump_block(
+                &int_val as *const i32 as *const std::ffi::c_void,
+                size_of::<i32>(),
+            );
             let inst_val: u32 = DumpState::LUAC_INST;
             self.dump_byte(size_of::<u32>() as u8);
-            self.dump_block(&inst_val as *const u32 as *const std::ffi::c_void, size_of::<u32>());
+            self.dump_block(
+                &inst_val as *const u32 as *const std::ffi::c_void,
+                size_of::<u32>(),
+            );
             let integer_val: i64 = DumpState::LUAC_INTEGER;
             self.dump_byte(size_of::<i64>() as u8);
-            self.dump_block(&integer_val as *const i64 as *const std::ffi::c_void, size_of::<i64>());
+            self.dump_block(
+                &integer_val as *const i64 as *const std::ffi::c_void,
+                size_of::<i64>(),
+            );
             let number_val: f64 = DumpState::LUAC_NUM;
             self.dump_byte(size_of::<f64>() as u8);
-            self.dump_block(&number_val as *const f64 as *const std::ffi::c_void, size_of::<f64>());
+            self.dump_block(
+                &number_val as *const f64 as *const std::ffi::c_void,
+                size_of::<f64>(),
+            );
         }
     }
     pub fn state(&self) -> *mut State {
         self.dumpstate_interpreter
     }
     pub unsafe fn save_prototype(
-        state: *mut State, prototype: *const Prototype, write_function: WriteFunction, pointer: *mut std::ffi::c_void,
+        state: *mut State,
+        prototype: *const Prototype,
+        write_function: WriteFunction,
+        pointer: *mut std::ffi::c_void,
         is_strip: bool,
     ) -> i32 {
         unsafe {
@@ -144,7 +177,9 @@ pub unsafe fn lua_dump(state: *mut State, writer: WriteFunction, data: *mut std:
         if (*o).get_tagvariant() == TagVariant::ClosureL {
             status = DumpState::save_prototype(
                 state,
-                (*(*o).as_closure().unwrap()).closure_payload.closurepayload_lprototype,
+                (*(*o).as_closure().unwrap())
+                    .closure_payload
+                    .closurepayload_lprototype,
                 writer,
                 data,
                 is_strip,

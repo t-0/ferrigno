@@ -197,7 +197,9 @@ unsafe fn enumerate_ports(cap_mask: u32) -> Vec<AlsaPort> {
             let cname = if cname_ptr.is_null() {
                 format!("client-{}", cid)
             } else {
-                std::ffi::CStr::from_ptr(cname_ptr).to_string_lossy().into_owned()
+                std::ffi::CStr::from_ptr(cname_ptr)
+                    .to_string_lossy()
+                    .into_owned()
             };
 
             snd_seq_port_info_set_client(pi, cid);
@@ -217,10 +219,17 @@ unsafe fn enumerate_ports(cap_mask: u32) -> Vec<AlsaPort> {
                 let pname = if pname_ptr.is_null() {
                     format!("port-{}", pid)
                 } else {
-                    std::ffi::CStr::from_ptr(pname_ptr).to_string_lossy().into_owned()
+                    std::ffi::CStr::from_ptr(pname_ptr)
+                        .to_string_lossy()
+                        .into_owned()
                 };
 
-                result.push(AlsaPort { client_id: cid, port_id: pid, client_name: cname.clone(), port_name: pname });
+                result.push(AlsaPort {
+                    client_id: cid,
+                    port_id: pid,
+                    client_name: cname.clone(),
+                    port_name: pname,
+                });
             }
         }
 
@@ -231,13 +240,13 @@ unsafe fn enumerate_ports(cap_mask: u32) -> Vec<AlsaPort> {
 
 fn resolve_port(ports: &[AlsaPort], sel: &EndpointSelector) -> Option<AlsaPort> {
     match sel {
-        | EndpointSelector::Index(idx) => {
+        EndpointSelector::Index(idx) => {
             if *idx < 1 || *idx > ports.len() {
                 return None;
             }
             Some(ports[*idx - 1].clone())
-        },
-        | EndpointSelector::Name(want) => ports
+        }
+        EndpointSelector::Name(want) => ports
             .iter()
             .find(|p| p.display_name() == *want || p.port_name == *want)
             .cloned(),
@@ -257,42 +266,46 @@ unsafe fn event_to_bytes(ev: *const std::ffi::c_void) -> Option<Vec<u8>> {
         let data_ptr = (ev as *const u8).add(12);
 
         match ev_type {
-            | SND_SEQ_EVENT_NOTEON => {
+            SND_SEQ_EVENT_NOTEON => {
                 let channel = *data_ptr;
                 let note = *data_ptr.add(1);
                 let velocity = *data_ptr.add(2);
                 Some(vec![0x90 | (channel & 0xF), note & 0x7F, velocity & 0x7F])
-            },
-            | SND_SEQ_EVENT_NOTEOFF => {
+            }
+            SND_SEQ_EVENT_NOTEOFF => {
                 let channel = *data_ptr;
                 let note = *data_ptr.add(1);
                 let velocity = *data_ptr.add(2);
                 Some(vec![0x80 | (channel & 0xF), note & 0x7F, velocity & 0x7F])
-            },
-            | SND_SEQ_EVENT_KEYPRESS => {
+            }
+            SND_SEQ_EVENT_KEYPRESS => {
                 let channel = *data_ptr;
                 let note = *data_ptr.add(1);
                 let velocity = *data_ptr.add(2);
                 Some(vec![0xA0 | (channel & 0xF), note & 0x7F, velocity & 0x7F])
-            },
-            | SND_SEQ_EVENT_CONTROLLER => {
+            }
+            SND_SEQ_EVENT_CONTROLLER => {
                 let channel = *data_ptr;
                 // snd_seq_ev_ctrl: channel(u8), pad[3], param(u32), value(i32)
                 let param = std::ptr::read_unaligned(data_ptr.add(4) as *const u32);
                 let value = std::ptr::read_unaligned(data_ptr.add(8) as *const i32);
-                Some(vec![0xB0 | (channel & 0xF), (param & 0x7F) as u8, (value & 0x7F) as u8])
-            },
-            | SND_SEQ_EVENT_PGMCHANGE => {
+                Some(vec![
+                    0xB0 | (channel & 0xF),
+                    (param & 0x7F) as u8,
+                    (value & 0x7F) as u8,
+                ])
+            }
+            SND_SEQ_EVENT_PGMCHANGE => {
                 let channel = *data_ptr;
                 let value = std::ptr::read_unaligned(data_ptr.add(8) as *const i32);
                 Some(vec![0xC0 | (channel & 0xF), (value & 0x7F) as u8])
-            },
-            | SND_SEQ_EVENT_CHANPRESS => {
+            }
+            SND_SEQ_EVENT_CHANPRESS => {
                 let channel = *data_ptr;
                 let value = std::ptr::read_unaligned(data_ptr.add(8) as *const i32);
                 Some(vec![0xD0 | (channel & 0xF), (value & 0x7F) as u8])
-            },
-            | SND_SEQ_EVENT_PITCHBEND => {
+            }
+            SND_SEQ_EVENT_PITCHBEND => {
                 let channel = *data_ptr;
                 let value = std::ptr::read_unaligned(data_ptr.add(8) as *const i32);
                 // ALSA pitch bend: -8192..8191, MIDI wire: 0..16383
@@ -300,8 +313,8 @@ unsafe fn event_to_bytes(ev: *const std::ffi::c_void) -> Option<Vec<u8>> {
                 let lsb = (bent & 0x7F) as u8;
                 let msb = ((bent >> 7) & 0x7F) as u8;
                 Some(vec![0xE0 | (channel & 0xF), lsb, msb])
-            },
-            | SND_SEQ_EVENT_SYSEX => {
+            }
+            SND_SEQ_EVENT_SYSEX => {
                 // snd_seq_ev_ext: flags(u32), len(u32), ptr(*void)
                 let len = std::ptr::read_unaligned(data_ptr.add(4) as *const u32) as usize;
                 let pointer = std::ptr::read_unaligned(data_ptr.add(8) as *const *const u8);
@@ -309,35 +322,39 @@ unsafe fn event_to_bytes(ev: *const std::ffi::c_void) -> Option<Vec<u8>> {
                     return None;
                 }
                 Some(std::slice::from_raw_parts(pointer, len).to_vec())
-            },
-            | SND_SEQ_EVENT_CLOCK => Some(vec![0xF8]),
-            | SND_SEQ_EVENT_START => Some(vec![0xFA]),
-            | SND_SEQ_EVENT_CONTINUE => Some(vec![0xFB]),
-            | SND_SEQ_EVENT_STOP => Some(vec![0xFC]),
-            | SND_SEQ_EVENT_SENSING => Some(vec![0xFE]),
-            | SND_SEQ_EVENT_RESET => Some(vec![0xFF]),
-            | SND_SEQ_EVENT_QFRAME => {
+            }
+            SND_SEQ_EVENT_CLOCK => Some(vec![0xF8]),
+            SND_SEQ_EVENT_START => Some(vec![0xFA]),
+            SND_SEQ_EVENT_CONTINUE => Some(vec![0xFB]),
+            SND_SEQ_EVENT_STOP => Some(vec![0xFC]),
+            SND_SEQ_EVENT_SENSING => Some(vec![0xFE]),
+            SND_SEQ_EVENT_RESET => Some(vec![0xFF]),
+            SND_SEQ_EVENT_QFRAME => {
                 let value = std::ptr::read_unaligned(data_ptr.add(8) as *const i32);
                 Some(vec![0xF1, (value & 0x7F) as u8])
-            },
-            | SND_SEQ_EVENT_SONGPOS => {
+            }
+            SND_SEQ_EVENT_SONGPOS => {
                 let value = std::ptr::read_unaligned(data_ptr.add(8) as *const i32);
                 let v = value.clamp(0, 16383) as u16;
                 Some(vec![0xF2, (v & 0x7F) as u8, ((v >> 7) & 0x7F) as u8])
-            },
-            | SND_SEQ_EVENT_SONGSEL => {
+            }
+            SND_SEQ_EVENT_SONGSEL => {
                 let value = std::ptr::read_unaligned(data_ptr.add(8) as *const i32);
                 Some(vec![0xF3, (value & 0x7F) as u8])
-            },
-            | SND_SEQ_EVENT_TUNE_REQUEST => Some(vec![0xF6]),
-            | _ => None,
+            }
+            SND_SEQ_EVENT_TUNE_REQUEST => Some(vec![0xF6]),
+            _ => None,
         }
     }
 }
 
 /// Build and send an ALSA sequencer event from raw MIDI bytes.
 unsafe fn send_midi_event(
-    handle: *mut std::ffi::c_void, port: i32, dest_client: i32, dest_port: i32, data: &[u8],
+    handle: *mut std::ffi::c_void,
+    port: i32,
+    dest_client: i32,
+    dest_port: i32,
+    data: &[u8],
 ) -> Result<(), String> {
     unsafe {
         if data.is_empty() {
@@ -360,94 +377,94 @@ unsafe fn send_midi_event(
         *((ev as *mut u8).add(6)) = SND_SEQ_QUEUE_DIRECT;
 
         match status & 0xF0 {
-            | 0x90 if data.len() >= 3 => {
+            0x90 if data.len() >= 3 => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_NOTEON;
                 // flags byte at offset 1: set length mode to fixed (0)
                 *data_ptr = status & 0x0F; // channel
                 *data_ptr.add(1) = data[1]; // note
                 *data_ptr.add(2) = data[2]; // velocity
-            },
-            | 0x80 if data.len() >= 3 => {
+            }
+            0x80 if data.len() >= 3 => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_NOTEOFF;
                 *data_ptr = status & 0x0F;
                 *data_ptr.add(1) = data[1];
                 *data_ptr.add(2) = data[2];
-            },
-            | 0xA0 if data.len() >= 3 => {
+            }
+            0xA0 if data.len() >= 3 => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_KEYPRESS;
                 *data_ptr = status & 0x0F;
                 *data_ptr.add(1) = data[1];
                 *data_ptr.add(2) = data[2];
-            },
-            | 0xB0 if data.len() >= 3 => {
+            }
+            0xB0 if data.len() >= 3 => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_CONTROLLER;
                 *data_ptr = status & 0x0F; // channel
-                // param at offset +4 (u32)
+                                           // param at offset +4 (u32)
                 std::ptr::write_unaligned(data_ptr.add(4) as *mut u32, data[1] as u32);
                 // value at offset +8 (i32)
                 std::ptr::write_unaligned(data_ptr.add(8) as *mut i32, data[2] as i32);
-            },
-            | 0xC0 if data.len() >= 2 => {
+            }
+            0xC0 if data.len() >= 2 => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_PGMCHANGE;
                 *data_ptr = status & 0x0F;
                 std::ptr::write_unaligned(data_ptr.add(8) as *mut i32, data[1] as i32);
-            },
-            | 0xD0 if data.len() >= 2 => {
+            }
+            0xD0 if data.len() >= 2 => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_CHANPRESS;
                 *data_ptr = status & 0x0F;
                 std::ptr::write_unaligned(data_ptr.add(8) as *mut i32, data[1] as i32);
-            },
-            | 0xE0 if data.len() >= 3 => {
+            }
+            0xE0 if data.len() >= 3 => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_PITCHBEND;
                 *data_ptr = status & 0x0F;
                 let lsb = data[1] as i32;
                 let msb = data[2] as i32;
                 let value = ((msb << 7) | lsb) - 8192;
                 std::ptr::write_unaligned(data_ptr.add(8) as *mut i32, value);
-            },
-            | _ if status == 0xF0 => {
+            }
+            _ if status == 0xF0 => {
                 // SysEx: use snd_seq_ev_ext with variable-length data
                 *(ev as *mut u8) = SND_SEQ_EVENT_SYSEX;
                 // flags: SND_SEQ_EVENT_LENGTH_VARIABLE = (1 << 2)
                 *((ev as *mut u8).add(1)) = 1 << 2;
                 std::ptr::write_unaligned(data_ptr.add(4) as *mut u32, data.len() as u32);
                 std::ptr::write_unaligned(data_ptr.add(8) as *mut *const u8, data.as_ptr());
-            },
-            | _ if status == 0xF8 => {
+            }
+            _ if status == 0xF8 => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_CLOCK;
-            },
-            | _ if status == 0xFA => {
+            }
+            _ if status == 0xFA => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_START;
-            },
-            | _ if status == 0xFB => {
+            }
+            _ if status == 0xFB => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_CONTINUE;
-            },
-            | _ if status == 0xFC => {
+            }
+            _ if status == 0xFC => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_STOP;
-            },
-            | _ if status == 0xFE => {
+            }
+            _ if status == 0xFE => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_SENSING;
-            },
-            | _ if status == 0xFF => {
+            }
+            _ if status == 0xFF => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_RESET;
-            },
-            | _ if status == 0xF6 => {
+            }
+            _ if status == 0xF6 => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_TUNE_REQUEST;
-            },
-            | _ if status == 0xF1 && data.len() >= 2 => {
+            }
+            _ if status == 0xF1 && data.len() >= 2 => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_QFRAME;
                 std::ptr::write_unaligned(data_ptr.add(8) as *mut i32, data[1] as i32);
-            },
-            | _ if status == 0xF2 && data.len() >= 3 => {
+            }
+            _ if status == 0xF2 && data.len() >= 3 => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_SONGPOS;
                 let v = (data[1] as i32) | ((data[2] as i32) << 7);
                 std::ptr::write_unaligned(data_ptr.add(8) as *mut i32, v);
-            },
-            | _ if status == 0xF3 && data.len() >= 2 => {
+            }
+            _ if status == 0xF3 && data.len() >= 2 => {
                 *(ev as *mut u8) = SND_SEQ_EVENT_SONGSEL;
                 std::ptr::write_unaligned(data_ptr.add(8) as *mut i32, data[1] as i32);
-            },
-            | _ => return Err(format!("unsupported MIDI status 0x{:02X}", status)),
+            }
+            _ => return Err(format!("unsupported MIDI status 0x{:02X}", status)),
         }
 
         let rc = snd_seq_event_output_direct(handle, ev);
@@ -474,13 +491,26 @@ impl MidiOutputPort for AlsaOutput {
         if self.closed {
             return Err("port closed".into());
         }
-        unsafe { send_midi_event(self.handle.as_ptr(), self.port_id, self.dest_client, self.dest_port, data) }
+        unsafe {
+            send_midi_event(
+                self.handle.as_ptr(),
+                self.port_id,
+                self.dest_client,
+                self.dest_port,
+                data,
+            )
+        }
     }
 
     fn close(&mut self) {
         if !self.closed {
             unsafe {
-                snd_seq_disconnect_to(self.handle.as_ptr(), self.port_id, self.dest_client, self.dest_port);
+                snd_seq_disconnect_to(
+                    self.handle.as_ptr(),
+                    self.port_id,
+                    self.dest_client,
+                    self.dest_port,
+                );
                 snd_seq_delete_simple_port(self.handle.as_ptr(), self.port_id);
             }
             self.closed = true;
@@ -537,17 +567,34 @@ impl Drop for AlsaInput {
 // ─── Input reader thread ─────────────────────────────────────────────────────
 
 fn input_reader_thread(
-    handle: SeqHandle, port_id: i32, src_client: i32, src_port: i32, buf: SharedBuf, stop: Arc<std::sync::atomic::AtomicBool>,
+    handle: SeqHandle,
+    port_id: i32,
+    src_client: i32,
+    src_port: i32,
+    buf: SharedBuf,
+    stop: Arc<std::sync::atomic::AtomicBool>,
 ) {
     unsafe {
         // Set non-blocking so we can poll
         snd_seq_nonblock(handle.as_ptr(), 1);
 
         let nfds = snd_seq_poll_descriptors_count(handle.as_ptr(), POLLIN as i16);
-        let mut pfds = vec![Pollfd { fd: 0, events: 0, revents: 0 }; nfds as usize];
+        let mut pfds = vec![
+            Pollfd {
+                fd: 0,
+                events: 0,
+                revents: 0
+            };
+            nfds as usize
+        ];
 
         while !stop.load(std::sync::atomic::Ordering::Relaxed) {
-            snd_seq_poll_descriptors(handle.as_ptr(), pfds.as_mut_ptr(), nfds as u32, POLLIN as i16);
+            snd_seq_poll_descriptors(
+                handle.as_ptr(),
+                pfds.as_mut_ptr(),
+                nfds as u32,
+                POLLIN as i16,
+            );
             let poll_rc = poll(pfds.as_mut_ptr(), nfds as u64, 10); // 10ms timeout
             if poll_rc <= 0 {
                 continue;
@@ -562,7 +609,10 @@ fn input_reader_thread(
 
                 if let Some(bytes) = event_to_bytes(ev_ptr) {
                     if let Ok(mut q) = buf.lock() {
-                        q.push_back(MidiMsg { timestamp: 0, data: bytes });
+                        q.push_back(MidiMsg {
+                            timestamp: 0,
+                            data: bytes,
+                        });
                         while q.len() > MIDI_BUF_CAP {
                             q.pop_front();
                         }
@@ -590,7 +640,10 @@ impl MidiBackend for AlsaBackend {
         ports
             .iter()
             .enumerate()
-            .map(|(i, p)| MidiEndpointInfo { name: p.display_name(), index: i + 1 })
+            .map(|(i, p)| MidiEndpointInfo {
+                name: p.display_name(),
+                index: i + 1,
+            })
             .collect()
     }
 
@@ -599,7 +652,10 @@ impl MidiBackend for AlsaBackend {
         ports
             .iter()
             .enumerate()
-            .map(|(i, p)| MidiEndpointInfo { name: p.display_name(), index: i + 1 })
+            .map(|(i, p)| MidiEndpointInfo {
+                name: p.display_name(),
+                index: i + 1,
+            })
             .collect()
     }
 
@@ -623,7 +679,10 @@ impl MidiBackend for AlsaBackend {
             );
             if port_id < 0 {
                 snd_seq_close(handle);
-                return Err(format!("snd_seq_create_simple_port: {}", alsa_error(port_id)));
+                return Err(format!(
+                    "snd_seq_create_simple_port: {}",
+                    alsa_error(port_id)
+                ));
             }
 
             let rc = snd_seq_connect_to(handle, port_id, dest.client_id, dest.port_id);
@@ -663,7 +722,10 @@ impl MidiBackend for AlsaBackend {
             );
             if port_id < 0 {
                 snd_seq_close(handle);
-                return Err(format!("snd_seq_create_simple_port: {}", alsa_error(port_id)));
+                return Err(format!(
+                    "snd_seq_create_simple_port: {}",
+                    alsa_error(port_id)
+                ));
             }
 
             let rc = snd_seq_connect_from(handle, port_id, src.client_id, src.port_id);
@@ -688,7 +750,12 @@ impl MidiBackend for AlsaBackend {
 
             let thread = std::thread::spawn(move || {
                 input_reader_thread(
-                    thread_handle, port_id, thread_src_client, thread_src_port, thread_buf, thread_stop,
+                    thread_handle,
+                    port_id,
+                    thread_src_client,
+                    thread_src_port,
+                    thread_buf,
+                    thread_stop,
                 );
             });
 

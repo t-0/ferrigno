@@ -26,10 +26,16 @@ impl BuffFS {
     pub unsafe fn clear(&mut self) {
         unsafe {
             let tvalue: *mut TValue = &mut (*(*self.bufffs_interpreter).interpreter_top.stkidrel_pointer);
-            let tstring: *mut TString = luas_newlstr(self.bufffs_interpreter, self.bufffs_block.as_mut_ptr(), self.bufffs_size);
+            let tstring: *mut TString = luas_newlstr(
+                self.bufffs_interpreter,
+                self.bufffs_block.as_mut_ptr(),
+                self.bufffs_size,
+            );
             (*tvalue).set_object(tstring as *mut Object, (*tstring).get_tagvariant());
-            (*self.bufffs_interpreter).interpreter_top.stkidrel_pointer =
-                (*self.bufffs_interpreter).interpreter_top.stkidrel_pointer.add(1);
+            (*self.bufffs_interpreter).interpreter_top.stkidrel_pointer = (*self.bufffs_interpreter)
+                .interpreter_top
+                .stkidrel_pointer
+                .add(1);
             if self.bufffs_is_pushed {
                 concatenate(self.bufffs_interpreter, 2);
             } else {
@@ -57,8 +63,10 @@ impl BuffFS {
                 let io = &mut (*(*self.bufffs_interpreter).interpreter_top.stkidrel_pointer);
                 let tstring = luas_newlstr(self.bufffs_interpreter, pointer, length);
                 (*io).set_object(tstring as *mut Object, (*tstring).get_tagvariant());
-                (*self.bufffs_interpreter).interpreter_top.stkidrel_pointer =
-                    (*self.bufffs_interpreter).interpreter_top.stkidrel_pointer.add(1);
+                (*self.bufffs_interpreter).interpreter_top.stkidrel_pointer = (*self.bufffs_interpreter)
+                    .interpreter_top
+                    .stkidrel_pointer
+                    .add(1);
                 if self.bufffs_is_pushed {
                     concatenate(self.bufffs_interpreter, 2);
                 } else {

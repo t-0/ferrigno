@@ -72,7 +72,11 @@ impl User {
             if count_bytes > MAXIMUM_SIZE - User::user_get_size(0, count_upvalues) {
                 (*state).too_big();
             }
-            let object: *mut Object = luac_newobj(state, TagVariant::User, User::user_get_size(count_bytes, count_upvalues));
+            let object: *mut Object = luac_newobj(
+                state,
+                TagVariant::User,
+                User::user_get_size(count_bytes, count_upvalues),
+            );
             let ret: *mut User = &mut *(object as *mut User);
             (*ret).user_countbytes = count_bytes;
             (*ret).user_countupvalues = count_upvalues as i32;
@@ -111,7 +115,10 @@ impl User {
                     Object::really_mark_object(global, obj);
                 }
             }
-            Object::generate_link(global, &mut *(self as *mut User as *mut std::ffi::c_void as *mut Object));
+            Object::generate_link(
+                global,
+                &mut *(self as *mut User as *mut std::ffi::c_void as *mut Object),
+            );
             1 + self.user_countupvalues
         }
     }

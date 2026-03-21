@@ -11,7 +11,11 @@ pub struct VectorT<T> {
 }
 impl<T> TDefaultNew for VectorT<T> {
     fn new() -> VectorT<T> {
-        VectorT::<T> { vectort_pointer: null_mut(), vectort_length: 0, vectort_size: 0 }
+        VectorT::<T> {
+            vectort_pointer: null_mut(),
+            vectort_length: 0,
+            vectort_size: 0,
+        }
     }
 }
 impl<T> VectorT<T> {
@@ -48,8 +52,11 @@ impl<T> VectorT<T> {
         unsafe {
             let old_total = self.vectort_size * size_of::<T>();
             let new_total = newsize * size_of::<T>();
-            self.vectort_pointer =
-                (*state).safereallocate(self.vectort_pointer as *mut std::ffi::c_void, old_total, new_total) as *mut T;
+            self.vectort_pointer = (*state).safereallocate(
+                self.vectort_pointer as *mut std::ffi::c_void,
+                old_total,
+                new_total,
+            ) as *mut T;
             self.vectort_length = 0;
             self.vectort_size = newsize;
         }
@@ -77,7 +84,11 @@ impl<T> VectorT<T> {
     }
     pub unsafe fn destroy(&mut self, state: *mut State) {
         unsafe {
-            (*state).safereallocate(self.vectort_pointer as *mut std::ffi::c_void, self.vectort_size, 0);
+            (*state).safereallocate(
+                self.vectort_pointer as *mut std::ffi::c_void,
+                self.vectort_size,
+                0,
+            );
             self.vectort_pointer = null_mut();
             self.vectort_size = 0;
         }
@@ -90,7 +101,11 @@ impl<T> VectorT<T> {
             }
             if newsize >= limit / 2 {
                 if newsize >= limit {
-                    luag_runerror(state, c"too many %s (limit is %d)".as_ptr(), &[what.into(), limit.into()]);
+                    luag_runerror(
+                        state,
+                        c"too many %s (limit is %d)".as_ptr(),
+                        &[what.into(), limit.into()],
+                    );
                 }
                 newsize = limit;
             } else {

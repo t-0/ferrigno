@@ -63,7 +63,9 @@ impl Prototype {
             dump_state.dump_int(self.prototype_code.get_size() as i32);
             dump_state.dump_block(
                 self.prototype_code.vectort_pointer as *const std::ffi::c_void,
-                self.prototype_code.get_size().wrapping_mul(size_of::<u32>()),
+                self.prototype_code
+                    .get_size()
+                    .wrapping_mul(size_of::<u32>()),
             );
         }
     }
@@ -95,9 +97,16 @@ impl Prototype {
     }
     pub unsafe fn dump_debug(&self, dump_state: &mut DumpState) {
         unsafe {
-            let n = if dump_state.is_strip() { 0 } else { self.prototype_lineinfo.get_size() };
+            let n = if dump_state.is_strip() {
+                0
+            } else {
+                self.prototype_lineinfo.get_size()
+            };
             dump_state.dump_int(n as i32);
-            dump_state.dump_block(self.prototype_lineinfo.vectort_pointer as *const std::ffi::c_void, n);
+            dump_state.dump_block(
+                self.prototype_lineinfo.vectort_pointer as *const std::ffi::c_void,
+                n,
+            );
         }
         unsafe {
             let n = if dump_state.is_strip() {
@@ -112,7 +121,11 @@ impl Prototype {
             }
         }
         unsafe {
-            let n = if dump_state.is_strip() { 0 } else { self.prototype_localvariables.get_size() };
+            let n = if dump_state.is_strip() {
+                0
+            } else {
+                self.prototype_localvariables.get_size()
+            };
             dump_state.dump_int(n as i32);
             for i in 0..n {
                 TString::dump_string(
@@ -124,10 +137,17 @@ impl Prototype {
             }
         }
         unsafe {
-            let n = if dump_state.is_strip() { 0 } else { self.prototype_upvalues.get_size() };
+            let n = if dump_state.is_strip() {
+                0
+            } else {
+                self.prototype_upvalues.get_size()
+            };
             dump_state.dump_int(n as i32);
             for i in 0..n {
-                TString::dump_string(dump_state, (*(self.prototype_upvalues.at(i as isize))).upvaluedescription_name);
+                TString::dump_string(
+                    dump_state,
+                    (*(self.prototype_upvalues.at(i as isize))).upvaluedescription_name,
+                );
             }
         }
     }
@@ -159,16 +179,16 @@ impl Prototype {
                 let tagvariant = (*tvalue).get_tagvariant();
                 dump_state.dump_byte(tagvariant as u8);
                 match tagvariant {
-                    | TagVariant::NumericNumber => {
+                    TagVariant::NumericNumber => {
                         dump_state.dump_number((*tvalue).as_number().unwrap());
-                    },
-                    | TagVariant::NumericInteger => {
+                    }
+                    TagVariant::NumericInteger => {
                         dump_state.dump_integer((*tvalue).as_integer().unwrap());
-                    },
-                    | TagVariant::StringShort | TagVariant::StringLong => {
+                    }
+                    TagVariant::StringShort | TagVariant::StringLong => {
                         TString::dump_string(dump_state, &*(*tvalue).as_string().unwrap());
-                    },
-                    | _ => {},
+                    }
+                    _ => {}
                 }
             }
         }
@@ -230,16 +250,22 @@ impl Prototype {
             if !fixed {
                 (*state).free_memory(
                     self.prototype_code.vectort_pointer as *mut std::ffi::c_void,
-                    self.prototype_code.get_size().wrapping_mul(size_of::<u32>()),
+                    self.prototype_code
+                        .get_size()
+                        .wrapping_mul(size_of::<u32>()),
                 );
             }
             (*state).free_memory(
                 self.prototype_prototypes.vectort_pointer as *mut std::ffi::c_void,
-                self.prototype_prototypes.get_size().wrapping_mul(size_of::<*mut Prototype>()),
+                self.prototype_prototypes
+                    .get_size()
+                    .wrapping_mul(size_of::<*mut Prototype>()),
             );
             (*state).free_memory(
                 self.prototype_constants.vectort_pointer as *mut std::ffi::c_void,
-                self.prototype_constants.get_size().wrapping_mul(size_of::<TValue>()),
+                self.prototype_constants
+                    .get_size()
+                    .wrapping_mul(size_of::<TValue>()),
             );
             if !fixed {
                 (*state).free_memory(
@@ -261,9 +287,14 @@ impl Prototype {
             );
             (*state).free_memory(
                 self.prototype_upvalues.vectort_pointer as *mut std::ffi::c_void,
-                self.prototype_upvalues.get_size().wrapping_mul(size_of::<UpValueDescription>()),
+                self.prototype_upvalues
+                    .get_size()
+                    .wrapping_mul(size_of::<UpValueDescription>()),
             );
-            (*state).free_memory(self as *mut Prototype as *mut std::ffi::c_void, size_of::<Prototype>());
+            (*state).free_memory(
+                self as *mut Prototype as *mut std::ffi::c_void,
+                size_of::<Prototype>(),
+            );
         }
     }
 }
@@ -311,7 +342,11 @@ pub unsafe fn luag_getfuncline(prototype: *const Prototype, program_counter: i32
 pub unsafe fn upvalname(p: *const Prototype, uv: i32) -> *const i8 {
     unsafe {
         let s: *mut TString = (*((*p).prototype_upvalues.vectort_pointer).add(uv as usize)).upvaluedescription_name;
-        if s.is_null() { c"?".as_ptr() } else { (*s).get_contents_mut() }
+        if s.is_null() {
+            c"?".as_ptr()
+        } else {
+            (*s).get_contents_mut()
+        }
     }
 }
 pub unsafe fn nextline(p: *const Prototype, currentline: i32, program_counter: i32) -> i32 {
@@ -337,27 +372,27 @@ pub unsafe fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i32) -> i32 
             let a: i32 = (i >> POSITION_A & MASK_A) as i32;
             let change: i32;
             match op {
-                | OPCODE_LOADNIL => {
+                OPCODE_LOADNIL => {
                     let b: i32 = (i >> POSITION_B & MASK_A) as i32;
                     change = (a <= reg && reg <= a + b) as i32;
-                },
-                | OPCODE_TFORCALL => {
+                }
+                OPCODE_TFORCALL => {
                     change = (reg >= a + 2) as i32;
-                },
-                | OPCODE_CALL | OPCODE_TAILCALL => {
+                }
+                OPCODE_CALL | OPCODE_TAILCALL => {
                     change = (reg >= a) as i32;
-                },
-                | OPCODE_JMP => {
+                }
+                OPCODE_JMP => {
                     let offset: i32 = (i >> POSITION_A & MASK_AX) as i32 - (OFFSET_SJ);
                     let dest: i32 = program_counter + 1 + offset;
                     if dest <= lastpc && dest > jmptarget {
                         jmptarget = dest;
                     }
                     change = 0;
-                },
-                | _ => {
+                }
+                _ => {
                     change = (OPMODES[op as usize] as i32 & OPMODE_A != 0 && reg == a) as i32;
-                },
+                }
             }
             if change != 0 {
                 setreg = filter_program_counter(program_counter, jmptarget);
@@ -392,27 +427,27 @@ pub unsafe fn basicgetobjname(p: *const Prototype, ppc: *mut i32, reg: i32, name
             let i: u32 = *((*p).prototype_code.vectort_pointer).add(program_counter as usize);
             let op: u32 = i & MASK_OP;
             match op {
-                | OPCODE_MOVE => {
+                OPCODE_MOVE => {
                     let b: i32 = (i >> POSITION_B & MASK_A) as i32;
                     if b < (i >> POSITION_A & MASK_A) as i32 {
                         return basicgetobjname(p, ppc, b, name);
                     }
-                },
-                | OPCODE_GET_UPVALUE => {
+                }
+                OPCODE_GET_UPVALUE => {
                     *name = upvalname(p, (i >> POSITION_B & MASK_A) as i32);
                     return TagType::STRING_UPVALUE;
-                },
-                | OPCODE_LOADK => {
+                }
+                OPCODE_LOADK => {
                     return kname(p, (i >> POSITION_K & MASK_BX) as i32, name);
-                },
-                | OPCODE_LOADKX => {
+                }
+                OPCODE_LOADKX => {
                     return kname(
                         p,
                         (*((*p).prototype_code.vectort_pointer).add((program_counter + 1) as usize) >> POSITION_A & MASK_AX) as i32,
                         name,
                     );
-                },
-                | _ => {},
+                }
+                _ => {}
             }
         }
         null()
@@ -464,31 +499,31 @@ pub unsafe fn getobjname(p: *const Prototype, mut lastpc: i32, reg: i32, name: *
             let i: u32 = *((*p).prototype_code.vectort_pointer).add(lastpc as usize);
             let op: u32 = i & MASK_OP;
             match op {
-                | OPCODE_GET_TABLE_UPVALUE => {
+                OPCODE_GET_TABLE_UPVALUE => {
                     let k: i32 = (i >> POSITION_C & MASK_A) as i32;
                     kname(p, k, name);
                     return is_environment(p, lastpc, i, 1);
-                },
-                | OPCODE_GET_TABLE => {
+                }
+                OPCODE_GET_TABLE => {
                     let key: i32 = (i >> POSITION_C & MASK_A) as i32;
                     rname(p, lastpc, key, name);
                     return is_environment(p, lastpc, i, 0);
-                },
-                | OPCODE_INDEX_INTEGER => {
+                }
+                OPCODE_INDEX_INTEGER => {
                     *name = c"integer index".as_ptr();
                     return c"field".as_ptr();
-                },
-                | OPCODE_GET_FIELD => {
+                }
+                OPCODE_GET_FIELD => {
                     let field_key: i32 = (i >> POSITION_C & MASK_A) as i32;
                     kname(p, field_key, name);
                     return is_environment(p, lastpc, i, 0);
-                },
-                | OPCODE_SELF => {
+                }
+                OPCODE_SELF => {
                     let method_key: i32 = (i >> POSITION_C & MASK_A) as i32;
                     kname(p, method_key, name);
                     return c"method".as_ptr();
-                },
-                | _ => {},
+                }
+                _ => {}
             }
         }
         null()
@@ -499,47 +534,47 @@ pub unsafe fn funcnamefromcode(state: *mut State, p: *const Prototype, program_c
         let tm: u32;
         let i: u32 = *((*p).prototype_code.vectort_pointer).add(program_counter as usize);
         match i & MASK_OP {
-            | OPCODE_CALL | OPCODE_TAILCALL => {
+            OPCODE_CALL | OPCODE_TAILCALL => {
                 return getobjname(p, program_counter, (i >> POSITION_A & MASK_A) as i32, name);
-            },
-            | OPCODE_TFORCALL => {
+            }
+            OPCODE_TFORCALL => {
                 *name = c"for iterator".as_ptr();
                 return c"for iterator".as_ptr();
-            },
-            | OPCODE_SELF | OPCODE_GET_TABLE_UPVALUE | OPCODE_GET_TABLE | OPCODE_INDEX_INTEGER | OPCODE_GET_FIELD => {
+            }
+            OPCODE_SELF | OPCODE_GET_TABLE_UPVALUE | OPCODE_GET_TABLE | OPCODE_INDEX_INTEGER | OPCODE_GET_FIELD => {
                 tm = TM_INDEX;
-            },
-            | OPCODE_SETTABUP | OPCODE_SETTABLE | OPCODE_SETI | OPCODE_SETFIELD => {
+            }
+            OPCODE_SETTABUP | OPCODE_SETTABLE | OPCODE_SETI | OPCODE_SETFIELD => {
                 tm = TM_NEWINDEX;
-            },
-            | OPCODE_MMBIN | OPCODE_MMBINI | OPCODE_MMBINK => {
+            }
+            OPCODE_MMBIN | OPCODE_MMBINI | OPCODE_MMBINK => {
                 tm = i >> POSITION_C & MASK_A;
-            },
-            | OPCODE_UNM => {
+            }
+            OPCODE_UNM => {
                 tm = TM_UNM;
-            },
-            | OPCODE_BNOT => {
+            }
+            OPCODE_BNOT => {
                 tm = TM_BNOT;
-            },
-            | OPCODE_LEN => {
+            }
+            OPCODE_LEN => {
                 tm = TM_LEN;
-            },
-            | OPCODE_CONCAT => {
+            }
+            OPCODE_CONCAT => {
                 tm = TM_CONCAT;
-            },
-            | OPCODE_EQ => {
+            }
+            OPCODE_EQ => {
                 tm = TM_EQ;
-            },
-            | OPCODE_LT | OPCODE_LTI | OPCODE_GTI => {
+            }
+            OPCODE_LT | OPCODE_LTI | OPCODE_GTI => {
                 tm = TM_LT;
-            },
-            | OPCODE_LE | OPCODE_LEI | OPCODE_GEI => {
+            }
+            OPCODE_LE | OPCODE_LEI | OPCODE_GEI => {
                 tm = TM_LE;
-            },
-            | OPCODE_CLOSE | OPCODE_RETURN => {
+            }
+            OPCODE_CLOSE | OPCODE_RETURN => {
                 tm = TM_CLOSE;
-            },
-            | _ => return null(),
+            }
+            _ => return null(),
         }
         *name = ((*(*(*state).interpreter_global).global_tmname[tm as usize]).get_contents()).add(2);
         c"metamethod".as_ptr()

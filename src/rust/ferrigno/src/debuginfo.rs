@@ -113,9 +113,11 @@ pub unsafe fn lua_getlocal(state: *mut State, debuginfo: *const DebugInfo, n: i3
         if debuginfo.is_null() {
             if (*(*state).interpreter_top.stkidrel_pointer.sub(1)).get_tagvariant() == TagVariant::ClosureL {
                 luaf_getlocalname(
-                    (*(*(*state).interpreter_top.stkidrel_pointer.sub(1)).as_closure().unwrap())
-                        .closure_payload
-                        .closurepayload_lprototype,
+                    (*(*(*state).interpreter_top.stkidrel_pointer.sub(1))
+                        .as_closure()
+                        .unwrap())
+                    .closure_payload
+                    .closurepayload_lprototype,
                     n,
                     0,
                 )
@@ -193,7 +195,7 @@ pub unsafe fn lua_getinfo(state: *mut State, mut what: *const i8, debuginfo: *mu
             function = &mut (*(*callinfo).callinfo_function.stkidrel_pointer);
         }
         match (*function).get_tagvariant() {
-            | TagVariant::ClosureL => {
+            TagVariant::ClosureL => {
                 let closure: *mut Closure = (*function).as_closure().unwrap();
                 status = Closure::auxgetinfo(state, what, debuginfo, closure, callinfo);
                 if !(cstr_chr(what, Character::LowerF as i8)).is_null() {
@@ -206,8 +208,8 @@ pub unsafe fn lua_getinfo(state: *mut State, mut what: *const i8, debuginfo: *mu
                     Closure::collectvalidlines(state, closure);
                 }
                 status
-            },
-            | TagVariant::ClosureC => {
+            }
+            TagVariant::ClosureC => {
                 let closure: *mut Closure = (*function).as_closure().unwrap();
                 status = Closure::auxgetinfo(state, what, debuginfo, closure, callinfo);
                 if !(cstr_chr(what, Character::LowerF as i8)).is_null() {
@@ -220,8 +222,8 @@ pub unsafe fn lua_getinfo(state: *mut State, mut what: *const i8, debuginfo: *mu
                     Closure::collectvalidlines(state, closure);
                 }
                 status
-            },
-            | _ => {
+            }
+            _ => {
                 let closure: *mut Closure = null_mut();
                 status = Closure::auxgetinfo(state, what, debuginfo, closure, callinfo);
                 if !(cstr_chr(what, Character::LowerF as i8)).is_null() {
@@ -234,7 +236,7 @@ pub unsafe fn lua_getinfo(state: *mut State, mut what: *const i8, debuginfo: *mu
                     Closure::collectvalidlines(state, closure);
                 }
                 status
-            },
+            }
         }
     }
 }

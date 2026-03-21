@@ -16,10 +16,14 @@ pub union Value {
 }
 impl Value {
     pub const fn new_object(object: *mut Object) -> Self {
-        Value { value_object: object }
+        Value {
+            value_object: object,
+        }
     }
     pub const fn new_integer(integer: i64) -> Self {
-        Value { value_integer: integer }
+        Value {
+            value_integer: integer,
+        }
     }
 }
 #[derive(Copy, Clone)]

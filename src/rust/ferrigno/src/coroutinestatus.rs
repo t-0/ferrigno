@@ -12,10 +12,10 @@ pub enum CoroutineStatus {
 impl CoroutineStatus {
     pub fn get_name(&self) -> *const i8 {
         match *self {
-            | CoroutineStatus::Dead => c"dead".as_ptr(),
-            | CoroutineStatus::Yield => c"suspended".as_ptr(),
-            | CoroutineStatus::Running => c"running".as_ptr(),
-            | CoroutineStatus::Normal => c"normal".as_ptr(),
+            CoroutineStatus::Dead => c"dead".as_ptr(),
+            CoroutineStatus::Yield => c"suspended".as_ptr(),
+            CoroutineStatus::Running => c"running".as_ptr(),
+            CoroutineStatus::Normal => c"normal".as_ptr(),
         }
     }
     pub unsafe fn auxiliary_status(state: *mut State, coroutine: *mut State) -> CoroutineStatus {
@@ -24,8 +24,8 @@ impl CoroutineStatus {
                 CoroutineStatus::Running
             } else {
                 match (*coroutine).get_status() {
-                    | Status::Yield => CoroutineStatus::Yield,
-                    | Status::OK => {
+                    Status::Yield => CoroutineStatus::Yield,
+                    Status::OK => {
                         let mut debuginfo = DebugInfo::new();
                         if lua_getstack(coroutine, 0, &mut debuginfo) != 0 {
                             CoroutineStatus::Normal
@@ -34,8 +34,8 @@ impl CoroutineStatus {
                         } else {
                             CoroutineStatus::Yield
                         }
-                    },
-                    | _ => CoroutineStatus::Dead,
+                    }
+                    _ => CoroutineStatus::Dead,
                 }
             }
         }

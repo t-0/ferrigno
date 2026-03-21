@@ -42,9 +42,16 @@ pub unsafe fn sh_cmd(state: *mut State) -> i32 {
             // lual_tolstring coerces any Lua value to string and pushes it
             let arg_ptr = lual_tolstring(state, i, &mut arg_len);
             if arg_ptr.is_null() {
-                return lual_error(state, c"sh: cannot convert argument to string".as_ptr(), &[]);
+                return lual_error(
+                    state,
+                    c"sh: cannot convert argument to string".as_ptr(),
+                    &[],
+                );
             }
-            shell_quote(std::slice::from_raw_parts(arg_ptr as *const u8, arg_len), &mut cmd);
+            shell_quote(
+                std::slice::from_raw_parts(arg_ptr as *const u8, arg_len),
+                &mut cmd,
+            );
             lua_settop(state, -2); // pop the string pushed by lual_tolstring
         }
         cmd.push(0); // null-terminate for popen
@@ -55,18 +62,26 @@ pub unsafe fn sh_cmd(state: *mut State) -> i32 {
 
         // cmd is already null-terminated; strip the null for the Rust string
         let cmd_str = std::str::from_utf8(&cmd[..cmd.len() - 1]).unwrap_or("");
-        let output = match std::process::Command::new("sh").arg("-c").arg(cmd_str).output() {
-            | Ok(o) => o,
-            | Err(e) => {
+        let output = match std::process::Command::new("sh")
+            .arg("-c")
+            .arg(cmd_str)
+            .output()
+        {
+            Ok(o) => o,
+            Err(e) => {
                 (*state).push_nil();
                 let msg = std::ffi::CString::new(e.to_string()).unwrap_or_default();
                 lua_pushstring(state, msg.as_ptr());
                 return 2;
-            },
+            }
         };
 
         if output.status.success() {
-            lua_pushlstring(state, output.stdout.as_ptr() as *const i8, output.stdout.len());
+            lua_pushlstring(
+                state,
+                output.stdout.as_ptr() as *const i8,
+                output.stdout.len(),
+            );
             1
         } else {
             let exit_code = output.status.code().unwrap_or(1);
@@ -92,18 +107,26 @@ pub unsafe fn sh_exec(state: *mut State) -> i32 {
         std::io::stdout().flush().ok();
         std::io::stderr().flush().ok();
 
-        let output = match std::process::Command::new("sh").arg("-c").arg(cmd_str).output() {
-            | Ok(o) => o,
-            | Err(e) => {
+        let output = match std::process::Command::new("sh")
+            .arg("-c")
+            .arg(cmd_str)
+            .output()
+        {
+            Ok(o) => o,
+            Err(e) => {
                 (*state).push_nil();
                 let msg = std::ffi::CString::new(e.to_string()).unwrap_or_default();
                 lua_pushstring(state, msg.as_ptr());
                 return 2;
-            },
+            }
         };
 
         if output.status.success() {
-            lua_pushlstring(state, output.stdout.as_ptr() as *const i8, output.stdout.len());
+            lua_pushlstring(
+                state,
+                output.stdout.as_ptr() as *const i8,
+                output.stdout.len(),
+            );
             1
         } else {
             let exit_code = output.status.code().unwrap_or(1);

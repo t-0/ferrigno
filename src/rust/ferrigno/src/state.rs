@@ -10,6 +10,7 @@ use crate::dynamicdata::*;
 use crate::f2i::*;
 use crate::forloop::*;
 use crate::functions::*;
+pub use crate::functionstate::*;
 use crate::global::*;
 use crate::lexicalstate::*;
 use crate::loadf::*;
@@ -45,7 +46,6 @@ use crate::zio::*;
 use std::cell::RefCell;
 use std::io::Write;
 use std::ptr::*;
-pub use crate::functionstate::*;
 
 const TFOR_CALL: usize = 0;
 const TFOR_LOOP: usize = 1;
@@ -141,7 +141,10 @@ impl State {
         self.interpreter_count_yield -= 1;
     }
     pub unsafe fn safereallocate(
-        &mut self, oldblock: *mut std::ffi::c_void, oldsize: usize, newsize: usize,
+        &mut self,
+        oldblock: *mut std::ffi::c_void,
+        oldsize: usize,
+        newsize: usize,
     ) -> *mut std::ffi::c_void {
         unsafe {
             let newblock = self.reallocate(oldblock, oldsize, newsize);
@@ -194,7 +197,10 @@ impl State {
     }
     pub unsafe fn lua_callk(&mut self, nargs: i32, count_results: i32, ctx: i64, k: ContextFunction) {
         unsafe {
-            let function: *mut TValue = self.interpreter_top.stkidrel_pointer.sub((nargs + 1) as usize);
+            let function: *mut TValue = self
+                .interpreter_top
+                .stkidrel_pointer
+                .sub((nargs + 1) as usize);
             if k.is_some() && self.is_yieldable() {
                 (*self.interpreter_callinfo).callinfo_u.c.context_function = k;
                 (*self.interpreter_callinfo).callinfo_u.c.context = ctx;
@@ -238,7 +244,10 @@ impl State {
         unsafe {
             luaf_closeupval(self, self.interpreter_stack.stkidrel_pointer);
             freestack(self);
-            (*state).free_memory(self as *mut State as *mut std::ffi::c_void, size_of::<State>());
+            (*state).free_memory(
+                self as *mut State as *mut std::ffi::c_void,
+                size_of::<State>(),
+            );
         }
     }
     pub fn get_status(&mut self) -> Status {
@@ -247,19 +256,19 @@ impl State {
     pub unsafe fn set_error_object(&mut self, status: Status, old_top: *mut TValue) {
         unsafe {
             match status {
-                | Status::MemoryError => {
+                Status::MemoryError => {
                     let io: *mut TValue = &mut (*old_top);
                     let tstring: *mut TString = (*(self.interpreter_global)).global_memoryerrormessage;
                     (*io).set_object(tstring as *mut Object, (*tstring).get_tagvariant());
-                },
-                | Status::OK => {
+                }
+                Status::OK => {
                     (*old_top).tvalue_set_tag_variant(TagVariant::NilNil);
-                },
-                | _ => {
+                }
+                _ => {
                     let io1: *mut TValue = &mut (*old_top);
                     let io2: *const TValue = &mut (*(self.interpreter_top.stkidrel_pointer).sub(1));
                     (*io1).copy_from(&*io2);
-                },
+                }
             }
             self.interpreter_top.stkidrel_pointer = old_top.add(1);
         }
@@ -330,9 +339,12 @@ impl State {
     }
     pub unsafe fn get_top(&mut self) -> i32 {
         unsafe {
-            self.interpreter_top
-                .stkidrel_pointer
-                .offset_from(((*self.interpreter_callinfo).callinfo_function.stkidrel_pointer).add(1)) as i32
+            self.interpreter_top.stkidrel_pointer.offset_from(
+                ((*self.interpreter_callinfo)
+                    .callinfo_function
+                    .stkidrel_pointer)
+                    .add(1),
+            ) as i32
         }
     }
     pub unsafe fn find_pcall(&mut self) -> *mut CallInfo {
@@ -370,7 +382,11 @@ impl State {
             if !countout.is_null() {
                 *countout = i;
             }
-            if (*p).is_null() { null_mut() } else { p }
+            if (*p).is_null() {
+                null_mut()
+            } else {
+                p
+            }
         }
     }
     pub unsafe fn free_memory(&mut self, block: *mut std::ffi::c_void, oldsize: usize) {
@@ -380,7 +396,11 @@ impl State {
     }
     pub unsafe fn too_big(&mut self) -> ! {
         unsafe {
-            luag_runerror(self, c"memory allocation error: block too big".as_ptr(), &[]);
+            luag_runerror(
+                self,
+                c"memory allocation error: block too big".as_ptr(),
+                &[],
+            );
         }
     }
     pub unsafe fn push_state(&mut self) -> bool {
@@ -464,11 +484,19 @@ impl State {
     pub unsafe fn luad_shrinkstack(&mut self) {
         unsafe {
             let inuse: i32 = self.stackinuse();
-            let max: i32 = if inuse > LUAI_MAXSTACK / 3 { LUAI_MAXSTACK } else { inuse * 3 };
+            let max: i32 = if inuse > LUAI_MAXSTACK / 3 {
+                LUAI_MAXSTACK
+            } else {
+                inuse * 3
+            };
             if inuse <= LUAI_MAXSTACK
                 && (self.interpreter_stack_last.stkidrel_pointer).offset_from(self.interpreter_stack.stkidrel_pointer) as i32 > max
             {
-                let newsize: i32 = if inuse > LUAI_MAXSTACK / 2 { LUAI_MAXSTACK } else { inuse * 2 };
+                let newsize: i32 = if inuse > LUAI_MAXSTACK / 2 {
+                    LUAI_MAXSTACK
+                } else {
+                    inuse * 2
+                };
                 luad_reallocstack(self, newsize, false);
             }
             luae_shrinkci(self);
@@ -495,9 +523,9 @@ impl State {
         unsafe {
             let object: *const TValue = self.index_to_value(object_index);
             let metatable: *mut Table = match (*object).get_tagvariant().to_tag_type() {
-                | TagType::Table => (*(*object).as_table().unwrap()).get_metatable(),
-                | TagType::User => (*(*object).as_user().unwrap()).get_metatable(),
-                | _ => (*self.interpreter_global).global_metatables[(*object).get_tagvariant().to_tag_type() as usize],
+                TagType::Table => (*(*object).as_table().unwrap()).get_metatable(),
+                TagType::User => (*(*object).as_user().unwrap()).get_metatable(),
+                _ => (*self.interpreter_global).global_metatables[(*object).get_tagvariant().to_tag_type() as usize],
             };
             if metatable.is_null() {
                 false
@@ -522,7 +550,11 @@ impl State {
                     .as_mut_ptr()
                     .add((n - 1) as usize));
                 (*io1).copy_from(&*io2);
-                t = Some((*self.interpreter_top.stkidrel_pointer).get_tagvariant().to_tag_type());
+                t = Some(
+                    (*self.interpreter_top.stkidrel_pointer)
+                        .get_tagvariant()
+                        .to_tag_type(),
+                );
             }
             self.interpreter_top.stkidrel_pointer = self.interpreter_top.stkidrel_pointer.add(1);
             t
@@ -590,15 +622,24 @@ pub unsafe fn do_repl(state: *mut State) {
 pub unsafe fn luad_throw(state: *mut State, status: Status) -> ! {
     unsafe {
         if !((*state).interpreter_longjump).is_null() {
-            std::panic::panic_any(LuaError { status, unwind_to_base: false });
+            std::panic::panic_any(LuaError {
+                status,
+                unwind_to_base: false,
+            });
         } else {
             let global: *mut Global = (*state).interpreter_global;
             let outerstatus = luae_resetthread(state, status);
             (*state).interpreter_status = outerstatus;
             if !((*(*global).global_maininterpreter).interpreter_longjump).is_null() {
-                let top = (*(*global).global_maininterpreter).interpreter_top.stkidrel_pointer;
-                (*(*global).global_maininterpreter).interpreter_top.stkidrel_pointer =
-                    ((*(*global).global_maininterpreter).interpreter_top.stkidrel_pointer).add(1);
+                let top = (*(*global).global_maininterpreter)
+                    .interpreter_top
+                    .stkidrel_pointer;
+                (*(*global).global_maininterpreter)
+                    .interpreter_top
+                    .stkidrel_pointer = ((*(*global).global_maininterpreter)
+                    .interpreter_top
+                    .stkidrel_pointer)
+                    .add(1);
                 let io1: *mut TValue = &mut (*top);
                 let io2: *const TValue = &mut (*(*state).interpreter_top.stkidrel_pointer.sub(1));
                 (*io1).copy_from(&*io2);
@@ -635,15 +676,15 @@ pub unsafe fn luad_rawrunprotected(state: *mut State, f: ProtectedFunction, arbi
         (*state).interpreter_count_yield = oldcountyield;
         (*state).interpreter_count_c_calls = oldcountccalls;
         match result {
-            | Ok(()) => Status::OK,
-            | Err(payload) => match payload.downcast::<LuaError>() {
-                | Ok(lua_error) => {
+            Ok(()) => Status::OK,
+            Err(payload) => match payload.downcast::<LuaError>() {
+                Ok(lua_error) => {
                     if lua_error.unwind_to_base && !long_jump.longjump_previous.is_null() {
                         std::panic::resume_unwind(Box::new(*lua_error));
                     }
                     lua_error.status
-                },
-                | Err(other) => std::panic::resume_unwind(other),
+                }
+                Err(other) => std::panic::resume_unwind(other),
             },
         }
     }
@@ -701,7 +742,11 @@ pub unsafe fn luad_growstack(state: *mut State, n: i32, should_raise_error: bool
                 return luad_reallocstack(state, newsize, should_raise_error);
             }
         }
-        luad_reallocstack(state, LUAI_MAXSTACK + LUAI_MAXCCALLS as i32, should_raise_error);
+        luad_reallocstack(
+            state,
+            LUAI_MAXSTACK + LUAI_MAXCCALLS as i32,
+            should_raise_error,
+        );
         if should_raise_error {
             luag_runerror(state, c"stack overflow".as_ptr(), &[]);
         }
@@ -740,8 +785,16 @@ pub unsafe fn luad_hook(state: *mut State, event: i32, line: i32, ftransfer: i32
             {
                 luad_growstack(state, LUA_MINSTACK, true);
             }
-            if (*callinfo).callinfo_top.stkidrel_pointer < (*state).interpreter_top.stkidrel_pointer.add(LUA_MINSTACK as usize) {
-                (*callinfo).callinfo_top.stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer.add(LUA_MINSTACK as usize);
+            if (*callinfo).callinfo_top.stkidrel_pointer
+                < (*state)
+                    .interpreter_top
+                    .stkidrel_pointer
+                    .add(LUA_MINSTACK as usize)
+            {
+                (*callinfo).callinfo_top.stkidrel_pointer = (*state)
+                    .interpreter_top
+                    .stkidrel_pointer
+                    .add(LUA_MINSTACK as usize);
             }
             (*state).interpreter_allow_hook = 0;
             (*callinfo).callinfo_callstatus = ((*callinfo).callinfo_callstatus as i32 | mask) as u16;
@@ -764,9 +817,11 @@ pub unsafe fn luad_hookcall(state: *mut State, callinfo: *mut CallInfo) {
             } else {
                 0
             };
-            let p: *mut Prototype = (*(*(*callinfo).callinfo_function.stkidrel_pointer).as_closure().unwrap())
-                .closure_payload
-                .closurepayload_lprototype;
+            let p: *mut Prototype = (*(*(*callinfo).callinfo_function.stkidrel_pointer)
+                .as_closure()
+                .unwrap())
+            .closure_payload
+            .closurepayload_lprototype;
             (*callinfo).callinfo_u.l.saved_program_counter = ((*callinfo).callinfo_u.l.saved_program_counter).add(1);
             (*callinfo).callinfo_u.l.saved_program_counter;
             luad_hook(state, event, -1, 1, (*p).prototype_countparameters as i32);
@@ -781,9 +836,11 @@ pub unsafe fn rethook(state: *mut State, mut callinfo: *mut CallInfo, nres: i32)
             let firstres: *mut TValue = (*state).interpreter_top.stkidrel_pointer.sub(nres as usize);
             let mut delta: i32 = 0;
             if (*callinfo).callinfo_callstatus as i32 & CALLSTATUS_LUA == 0 {
-                let p: *mut Prototype = (*(*(*callinfo).callinfo_function.stkidrel_pointer).as_closure().unwrap())
-                    .closure_payload
-                    .closurepayload_lprototype;
+                let p: *mut Prototype = (*(*(*callinfo).callinfo_function.stkidrel_pointer)
+                    .as_closure()
+                    .unwrap())
+                .closure_payload
+                .closurepayload_lprototype;
                 if (*p).prototype_isvariablearguments {
                     delta = (*callinfo).callinfo_u.l.count_extra_arguments + (*p).prototype_countparameters as i32 + 1;
                 }
@@ -796,9 +853,11 @@ pub unsafe fn rethook(state: *mut State, mut callinfo: *mut CallInfo, nres: i32)
         callinfo = (*callinfo).callinfo_previous;
         if (*callinfo).callinfo_callstatus as i32 & CALLSTATUS_LUA == 0 {
             (*state).interpreter_old_program_counter = ((*callinfo).callinfo_u.l.saved_program_counter).offset_from(
-                (*(*(*(*callinfo).callinfo_function.stkidrel_pointer).as_closure().unwrap())
-                    .closure_payload
-                    .closurepayload_lprototype)
+                (*(*(*(*callinfo).callinfo_function.stkidrel_pointer)
+                    .as_closure()
+                    .unwrap())
+                .closure_payload
+                .closurepayload_lprototype)
                     .prototype_code
                     .vectort_pointer,
             ) as i32
@@ -835,11 +894,11 @@ pub unsafe fn tryfunctm(state: *mut State, mut function: *mut TValue) -> *mut TV
 pub unsafe fn moveresults(state: *mut State, mut res: *mut TValue, mut nres: i32, mut wanted: i32) {
     unsafe {
         match wanted {
-            | 0 => {
+            0 => {
                 (*state).interpreter_top.stkidrel_pointer = res;
                 return;
-            },
-            | 1 => {
+            }
+            1 => {
                 if nres == 0 {
                     (*res).tvalue_set_tag_variant(TagVariant::NilNil);
                 } else {
@@ -849,15 +908,17 @@ pub unsafe fn moveresults(state: *mut State, mut res: *mut TValue, mut nres: i32
                 }
                 (*state).interpreter_top.stkidrel_pointer = res.add(1);
                 return;
-            },
-            | -1 => {
+            }
+            -1 => {
                 wanted = nres;
-            },
-            | _ => {
+            }
+            _ => {
                 if wanted < -1 {
                     (*(*state).interpreter_callinfo).callinfo_callstatus =
                         ((*(*state).interpreter_callinfo).callinfo_callstatus as i32 | CALLSTATUS_TRAN) as u16;
-                    (*(*state).interpreter_callinfo).callinfo_u2.callinfoconstituentb_nres = nres;
+                    (*(*state).interpreter_callinfo)
+                        .callinfo_u2
+                        .callinfoconstituentb_nres = nres;
                     res = luaf_close(state, res, Status::Closing, 1);
                     (*(*state).interpreter_callinfo).callinfo_callstatus =
                         ((*(*state).interpreter_callinfo).callinfo_callstatus as i32 & !CALLSTATUS_TRAN) as u16;
@@ -872,7 +933,7 @@ pub unsafe fn moveresults(state: *mut State, mut res: *mut TValue, mut nres: i32
                         wanted = nres;
                     }
                 }
-            },
+            }
         }
         let firstresult: *mut TValue = (*state).interpreter_top.stkidrel_pointer.sub(nres as usize);
         if nres > wanted {
@@ -895,7 +956,12 @@ pub unsafe fn luad_poscall(state: *mut State, callinfo: *mut CallInfo, nres: i32
         if (*state).interpreter_hook_mask != 0 && (wanted >= -1) {
             rethook(state, callinfo, nres);
         }
-        moveresults(state, (*callinfo).callinfo_function.stkidrel_pointer, nres, wanted);
+        moveresults(
+            state,
+            (*callinfo).callinfo_function.stkidrel_pointer,
+            nres,
+            wanted,
+        );
         (*state).interpreter_callinfo = (*callinfo).callinfo_previous;
     }
 }
@@ -929,7 +995,10 @@ pub unsafe fn precallc(state: *mut State, mut function: *mut TValue, count_resul
             function,
             count_results,
             CALLSTATUS_LUA,
-            (*state).interpreter_top.stkidrel_pointer.add(LUA_MINSTACK as usize),
+            (*state)
+                .interpreter_top
+                .stkidrel_pointer
+                .add(LUA_MINSTACK as usize),
         );
         (*state).interpreter_callinfo = callinfo;
         if (*state).interpreter_hook_mask & HOOKMASK_CALL != 0 {
@@ -942,25 +1011,33 @@ pub unsafe fn precallc(state: *mut State, mut function: *mut TValue, count_resul
     }
 }
 pub unsafe fn luad_pretailcall(
-    state: *mut State, callinfo: *mut CallInfo, mut function: *mut TValue, mut narg1: i32, delta: i32,
+    state: *mut State,
+    callinfo: *mut CallInfo,
+    mut function: *mut TValue,
+    mut narg1: i32,
+    delta: i32,
 ) -> i32 {
     unsafe {
         let mut ccmt_count: u32 = 0;
         loop {
             match (*function).get_tagvariant() {
-                | TagVariant::ClosureC => {
+                TagVariant::ClosureC => {
                     return precallc(
                         state,
                         function,
                         -1,
-                        (*(*function).as_closure().unwrap()).closure_payload.closurepayload_cfunction,
+                        (*(*function).as_closure().unwrap())
+                            .closure_payload
+                            .closurepayload_cfunction,
                     );
-                },
-                | TagVariant::ClosureCFunction => {
+                }
+                TagVariant::ClosureCFunction => {
                     return precallc(state, function, -1, (*function).as_function().unwrap());
-                },
-                | TagVariant::ClosureL => {
-                    let p: *mut Prototype = (*(*function).as_closure().unwrap()).closure_payload.closurepayload_lprototype;
+                }
+                TagVariant::ClosureL => {
+                    let p: *mut Prototype = (*(*function).as_closure().unwrap())
+                        .closure_payload
+                        .closurepayload_lprototype;
                     let fsize: i32 = (*p).prototype_maximumstacksize as i32;
                     let nfixparams: i32 = (*p).prototype_countparameters as i32;
                     if ((*state).interpreter_stack_last.stkidrel_pointer).offset_from((*state).interpreter_top.stkidrel_pointer)
@@ -989,15 +1066,15 @@ pub unsafe fn luad_pretailcall(
                     (*callinfo).callinfo_callstatus = ((*callinfo).callinfo_callstatus as i32 | CALLSTATUS_TAIL) as u16;
                     (*state).interpreter_top.stkidrel_pointer = function.add(narg1 as usize);
                     return -1;
-                },
-                | _ => {
+                }
+                _ => {
                     if ccmt_count >= MAX_CCMT {
                         luag_runerror(state, c"'__call' chain too long".as_ptr(), &[]);
                     }
                     ccmt_count += 1;
                     function = tryfunctm(state, function);
                     narg1 += 1;
-                },
+                }
             }
         }
     }
@@ -1007,21 +1084,30 @@ pub unsafe fn luad_precall(state: *mut State, mut function: *mut TValue, count_r
         let mut ccmt_count: u32 = 0;
         loop {
             match (*function).get_tagvariant() {
-                | TagVariant::ClosureC => {
+                TagVariant::ClosureC => {
                     precallc(
                         state,
                         function,
                         count_results,
-                        (*(*function).as_closure().unwrap()).closure_payload.closurepayload_cfunction,
+                        (*(*function).as_closure().unwrap())
+                            .closure_payload
+                            .closurepayload_cfunction,
                     );
                     return null_mut();
-                },
-                | TagVariant::ClosureCFunction => {
-                    precallc(state, function, count_results, (*function).as_function().unwrap());
+                }
+                TagVariant::ClosureCFunction => {
+                    precallc(
+                        state,
+                        function,
+                        count_results,
+                        (*function).as_function().unwrap(),
+                    );
                     return null_mut();
-                },
-                | TagVariant::ClosureL => {
-                    let p: *mut Prototype = (*(*function).as_closure().unwrap()).closure_payload.closurepayload_lprototype;
+                }
+                TagVariant::ClosureL => {
+                    let p: *mut Prototype = (*(*function).as_closure().unwrap())
+                        .closure_payload
+                        .closurepayload_lprototype;
                     let mut narg: i32 = ((*state).interpreter_top.stkidrel_pointer).offset_from(function) as i32 - 1;
                     let nfixparams: i32 = (*p).prototype_countparameters as i32;
                     let fsize: i32 = (*p).prototype_maximumstacksize as i32;
@@ -1034,7 +1120,13 @@ pub unsafe fn luad_precall(state: *mut State, mut function: *mut TValue, count_r
                         luad_growstack(state, fsize, true);
                         function = ((*state).interpreter_stack.stkidrel_pointer as *mut i8).add(t__ as usize) as *mut TValue;
                     }
-                    let callinfo = prepcallinfo(state, function, count_results, 0, function.add(1).add(fsize as usize));
+                    let callinfo = prepcallinfo(
+                        state,
+                        function,
+                        count_results,
+                        0,
+                        function.add(1).add(fsize as usize),
+                    );
                     (*state).interpreter_callinfo = callinfo;
                     (*callinfo).callinfo_u.l.saved_program_counter = (*p).prototype_code.vectort_pointer;
                     while narg < nfixparams {
@@ -1044,14 +1136,14 @@ pub unsafe fn luad_precall(state: *mut State, mut function: *mut TValue, count_r
                         narg += 1;
                     }
                     return callinfo;
-                },
-                | _ => {
+                }
+                _ => {
                     if ccmt_count >= MAX_CCMT {
                         luag_runerror(state, c"'__call' chain too long".as_ptr(), &[]);
                     }
                     ccmt_count += 1;
                     function = tryfunctm(state, function);
-                },
+                }
             }
         }
     }
@@ -1114,9 +1206,14 @@ pub unsafe fn finishccall(state: *mut State, callinfo: *mut CallInfo) {
                 status = finishpcallk(state, callinfo);
             }
             if -1 <= -1
-                && (*(*state).interpreter_callinfo).callinfo_top.stkidrel_pointer < (*state).interpreter_top.stkidrel_pointer
+                && (*(*state).interpreter_callinfo)
+                    .callinfo_top
+                    .stkidrel_pointer
+                    < (*state).interpreter_top.stkidrel_pointer
             {
-                (*(*state).interpreter_callinfo).callinfo_top.stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer;
+                (*(*state).interpreter_callinfo)
+                    .callinfo_top
+                    .stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer;
             }
             n = ((*callinfo).callinfo_u.c.context_function).expect("non-null function pointer")(
                 state,
@@ -1206,11 +1303,21 @@ pub unsafe fn lua_resume(state: *mut State, from: *mut State, mut nargs: i32, co
     unsafe {
         let mut status;
         if (*state).interpreter_status == Status::OK {
-            if !std::ptr::eq((*state).interpreter_callinfo, &(*state).interpreter_base_callinfo) {
-                return resume_error(state, c"cannot resume non-suspended coroutine".as_ptr(), nargs);
-            } else if ((*state).interpreter_top.stkidrel_pointer)
-                .offset_from(((*(*state).interpreter_callinfo).callinfo_function.stkidrel_pointer).add(1))
-                as i64
+            if !std::ptr::eq(
+                (*state).interpreter_callinfo,
+                &(*state).interpreter_base_callinfo,
+            ) {
+                return resume_error(
+                    state,
+                    c"cannot resume non-suspended coroutine".as_ptr(),
+                    nargs,
+                );
+            } else if ((*state).interpreter_top.stkidrel_pointer).offset_from(
+                ((*(*state).interpreter_callinfo)
+                    .callinfo_function
+                    .stkidrel_pointer)
+                    .add(1),
+            ) as i64
                 == nargs as i64
             {
                 return resume_error(state, c"cannot resume dead coroutine".as_ptr(), nargs);
@@ -1237,13 +1344,21 @@ pub unsafe fn lua_resume(state: *mut State, from: *mut State, mut nargs: i32, co
         if status.is_error() {
             (*state).interpreter_status = status;
             (*state).set_error_object(status, (*state).interpreter_top.stkidrel_pointer);
-            (*(*state).interpreter_callinfo).callinfo_top.stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer;
+            (*(*state).interpreter_callinfo)
+                .callinfo_top
+                .stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer;
         }
         *count_results = if status == Status::Yield {
-            (*(*state).interpreter_callinfo).callinfo_u2.callinfoconstituentb_nyield
+            (*(*state).interpreter_callinfo)
+                .callinfo_u2
+                .callinfoconstituentb_nyield
         } else {
-            ((*state).interpreter_top.stkidrel_pointer)
-                .offset_from(((*(*state).interpreter_callinfo).callinfo_function.stkidrel_pointer).add(1)) as i32
+            ((*state).interpreter_top.stkidrel_pointer).offset_from(
+                ((*(*state).interpreter_callinfo)
+                    .callinfo_function
+                    .stkidrel_pointer)
+                    .add(1),
+            ) as i32
         };
         status
     }
@@ -1253,9 +1368,17 @@ pub unsafe fn lua_yieldk(state: *mut State, count_results: i32, ctx: i64, k: Con
         let callinfo = (*state).interpreter_callinfo;
         if !(*state).is_yieldable() {
             if state != (*(*state).interpreter_global).global_maininterpreter {
-                luag_runerror(state, c"attempt to yield across a C-call boundary".as_ptr(), &[]);
+                luag_runerror(
+                    state,
+                    c"attempt to yield across a C-call boundary".as_ptr(),
+                    &[],
+                );
             } else {
-                luag_runerror(state, c"attempt to yield from outside a coroutine".as_ptr(), &[]);
+                luag_runerror(
+                    state,
+                    c"attempt to yield from outside a coroutine".as_ptr(),
+                    &[],
+                );
             }
         }
         (*state).interpreter_status = Status::Yield;
@@ -1272,7 +1395,11 @@ pub unsafe fn lua_yieldk(state: *mut State, count_results: i32, ctx: i64, k: Con
     }
 }
 pub unsafe fn luad_pcall(
-    state: *mut State, function: ProtectedFunction, u: *mut std::ffi::c_void, old_top: i64, ef: i64,
+    state: *mut State,
+    function: ProtectedFunction,
+    u: *mut std::ffi::c_void,
+    old_top: i64,
+    ef: i64,
 ) -> Status {
     unsafe {
         let old_call_info = (*state).interpreter_callinfo;
@@ -1297,7 +1424,11 @@ pub unsafe fn luad_pcall(
 pub unsafe fn checkmode(state: *mut State, mode: *const i8, x: *const i8) {
     unsafe {
         if !mode.is_null() && (cstr_chr(mode, *x.add(0))).is_null() {
-            luao_pushfstring(state, c"attempt to load a %s chunk (mode is '%s')".as_ptr(), &[x.into(), mode.into()]);
+            luao_pushfstring(
+                state,
+                c"attempt to load a %s chunk (mode is '%s')".as_ptr(),
+                &[x.into(), mode.into()],
+            );
             luad_throw(state, Status::SyntaxError);
         }
     }
@@ -1309,7 +1440,10 @@ pub unsafe fn index2stack(state: *mut State, index: i32) -> *mut TValue {
             let o: *mut TValue = ((*callinfo).callinfo_function.stkidrel_pointer).add(index as usize);
             o
         } else {
-            (*state).interpreter_top.stkidrel_pointer.sub((-index) as usize)
+            (*state)
+                .interpreter_top
+                .stkidrel_pointer
+                .sub((-index) as usize)
         }
     }
 }
@@ -1357,8 +1491,11 @@ pub unsafe fn lua_absindex(state: *mut State, index: i32) -> i32 {
         if index > 0 || index <= LUA_REGISTRYINDEX {
             index
         } else {
-            ((*state).interpreter_top.stkidrel_pointer)
-                .offset_from((*(*state).interpreter_callinfo).callinfo_function.stkidrel_pointer) as i32
+            ((*state).interpreter_top.stkidrel_pointer).offset_from(
+                (*(*state).interpreter_callinfo)
+                    .callinfo_function
+                    .stkidrel_pointer,
+            ) as i32
                 + index
         }
     }
@@ -1419,7 +1556,11 @@ pub unsafe fn lua_rotate(state: *mut State, index: i32, n: i32) {
     unsafe {
         let high: *mut TValue = (*state).interpreter_top.stkidrel_pointer.sub(1);
         let low: *mut TValue = index2stack(state, index);
-        let middle: *mut TValue = if n >= 0 { high.sub(n as usize) } else { low.sub(n as usize).sub(1) };
+        let middle: *mut TValue = if n >= 0 {
+            high.sub(n as usize)
+        } else {
+            low.sub(n as usize).sub(1)
+        };
         reverse(state, low, middle);
         reverse(state, middle.add(1), high);
         reverse(state, low, high);
@@ -1434,7 +1575,9 @@ pub unsafe fn lua_copy(state: *mut State, fromidx: i32, toidx: i32) {
         (*io1).copy_from(&*io2);
         if toidx < LUA_REGISTRYINDEX
             && (*fr).is_collectable()
-            && (*(*(*(*state).interpreter_callinfo).callinfo_function.stkidrel_pointer)
+            && (*(*(*(*state).interpreter_callinfo)
+                .callinfo_function
+                .stkidrel_pointer)
                 .as_closure()
                 .unwrap())
             .get_marked()
@@ -1444,7 +1587,9 @@ pub unsafe fn lua_copy(state: *mut State, fromidx: i32, toidx: i32) {
         {
             Object::luac_barrier_(
                 state,
-                (*(*(*state).interpreter_callinfo).callinfo_function.stkidrel_pointer)
+                (*(*(*state).interpreter_callinfo)
+                    .callinfo_function
+                    .stkidrel_pointer)
                     .as_object()
                     .unwrap(),
                 (*fr).as_object().unwrap(),
@@ -1474,27 +1619,27 @@ pub unsafe fn lua_type(state: *mut State, index: i32) -> Option<TagType> {
 }
 pub unsafe fn lua_typename(mut _state: *mut State, tagtype: Option<TagType>) -> *const i8 {
     match tagtype {
-        | None => c"no value".as_ptr(),
-        | Some(TagType::Nil) => c"nil".as_ptr(),
-        | Some(TagType::Boolean) => c"boolean".as_ptr(),
-        | Some(TagType::Pointer) => c"pointer".as_ptr(),
-        | Some(TagType::Numeric) => c"number".as_ptr(),
-        | Some(TagType::String) => c"string".as_ptr(),
-        | Some(TagType::Table) => c"table".as_ptr(),
-        | Some(TagType::Closure) => c"function".as_ptr(),
-        | Some(TagType::User) => c"userdata".as_ptr(),
-        | Some(TagType::State) => c"thread".as_ptr(),
-        | Some(TagType::UpValue) => c"upvalue".as_ptr(),
-        | Some(TagType::Prototype) => c"proto".as_ptr(),
-        | Some(TagType::DeadKey) => c"deadkey".as_ptr(),
+        None => c"no value".as_ptr(),
+        Some(TagType::Nil) => c"nil".as_ptr(),
+        Some(TagType::Boolean) => c"boolean".as_ptr(),
+        Some(TagType::Pointer) => c"pointer".as_ptr(),
+        Some(TagType::Numeric) => c"number".as_ptr(),
+        Some(TagType::String) => c"string".as_ptr(),
+        Some(TagType::Table) => c"table".as_ptr(),
+        Some(TagType::Closure) => c"function".as_ptr(),
+        Some(TagType::User) => c"userdata".as_ptr(),
+        Some(TagType::State) => c"thread".as_ptr(),
+        Some(TagType::UpValue) => c"upvalue".as_ptr(),
+        Some(TagType::Prototype) => c"proto".as_ptr(),
+        Some(TagType::DeadKey) => c"deadkey".as_ptr(),
     }
 }
 pub unsafe fn lua_iscfunction(state: *mut State, index: i32) -> bool {
     unsafe {
         let tvalue: *const TValue = (*state).index_to_value(index);
         match (*tvalue).get_tagvariant() {
-            | TagVariant::ClosureCFunction | TagVariant::ClosureC => true,
-            | _ => false,
+            TagVariant::ClosureCFunction | TagVariant::ClosureC => true,
+            _ => false,
         }
     }
 }
@@ -1516,9 +1661,9 @@ pub unsafe fn lua_isstring(state: *mut State, index: i32) -> bool {
     unsafe {
         let tvalue: *const TValue = (*state).index_to_value(index);
         match (*tvalue).get_tagvariant().to_tag_type() {
-            | TagType::Numeric => true,
-            | TagType::String => true,
-            | _ => false,
+            TagType::Numeric => true,
+            TagType::String => true,
+            _ => false,
         }
     }
 }
@@ -1546,16 +1691,16 @@ pub unsafe fn lua_compare(state: *mut State, index1: i32, index2: i32, op: i32) 
                 || !std::ptr::eq(o2, &(*(*state).interpreter_global).global_nonevalue))
         {
             match op {
-                | 0 => {
+                0 => {
                     ret = luav_equalobj(state, o1, o2);
-                },
-                | 1 => {
+                }
+                1 => {
                     ret = luav_lessthan(state, o1, o2);
-                },
-                | 2 => {
+                }
+                2 => {
                     ret = luav_lessequal(state, o1, o2);
-                },
-                | _ => {},
+                }
+                _ => {}
             }
         }
         ret
@@ -1632,10 +1777,10 @@ pub unsafe fn get_length_raw(state: *mut State, index: i32) -> usize {
     unsafe {
         let tvalue: *const TValue = (*state).index_to_value(index);
         match (*tvalue).get_tagvariant() {
-            | TagVariant::StringShort | TagVariant::StringLong => (*(*tvalue).as_string().unwrap()).get_length_raw(),
-            | TagVariant::User => (*(*tvalue).as_user().unwrap()).get_length_raw(),
-            | TagVariant::Table => (*(*tvalue).as_table().unwrap()).get_length_raw(state),
-            | _ => 0,
+            TagVariant::StringShort | TagVariant::StringLong => (*(*tvalue).as_string().unwrap()).get_length_raw(),
+            TagVariant::User => (*(*tvalue).as_user().unwrap()).get_length_raw(),
+            TagVariant::Table => (*(*tvalue).as_table().unwrap()).get_length_raw(state),
+            _ => 0,
         }
     }
 }
@@ -1664,7 +1809,11 @@ pub unsafe fn lua_pushlstring(state: *mut State, s: *const i8, length: usize) ->
     }
 }
 pub unsafe fn lua_pushexternalstring(
-    state: *mut State, s: *const i8, length: usize, allocation_function: AllocationFunction, user_data: *mut std::ffi::c_void,
+    state: *mut State,
+    s: *const i8,
+    length: usize,
+    allocation_function: AllocationFunction,
+    user_data: *mut std::ffi::c_void,
 ) -> *const i8 {
     unsafe {
         let tstring: *mut TString = TString::create_external(state, s, length, allocation_function, user_data);
@@ -1779,7 +1928,10 @@ pub unsafe fn auxgetstr(state: *mut State, t: *const TValue, k: *const i8) -> Ta
 }
 pub unsafe fn lua_getglobal(state: *mut State, name: *const i8) -> TagType {
     unsafe {
-        let registry = (*(*state).interpreter_global).global_lregistry.as_table().unwrap();
+        let registry = (*(*state).interpreter_global)
+            .global_lregistry
+            .as_table()
+            .unwrap();
         let mut global_table: TValue = TValue::new(TagVariant::NilNil);
         arr2obj(registry, 1, &mut global_table);
         auxgetstr(state, &global_table, name)
@@ -1834,12 +1986,22 @@ pub unsafe fn lua_geti(state: *mut State, index: i32, n: i64) -> TagType {
         if (*t).get_tagvariant() != TagVariant::Table {
             tag = TagVariant::NilNil;
         } else {
-            tag = luah_getint((*t).as_table().unwrap(), n, (*state).interpreter_top.stkidrel_pointer);
+            tag = luah_getint(
+                (*t).as_table().unwrap(),
+                n,
+                (*state).interpreter_top.stkidrel_pointer,
+            );
         }
         if tag.to_tag_type().is_nil() {
             let mut aux: TValue = TValue::new(TagVariant::NilNil);
             aux.set_integer(n);
-            luav_finishget(state, t, &mut aux, (*state).interpreter_top.stkidrel_pointer, tag);
+            luav_finishget(
+                state,
+                t,
+                &mut aux,
+                (*state).interpreter_top.stkidrel_pointer,
+                tag,
+            );
         }
         (*state).interpreter_top.stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer.add(1);
         (*(*state).interpreter_top.stkidrel_pointer.sub(1))
@@ -1897,7 +2059,12 @@ pub unsafe fn auxsetstr(state: *mut State, t: *const TValue, k: *const i8) {
                 (*io1).copy_from(&*io2);
                 if (*(*state).interpreter_top.stkidrel_pointer.sub(1)).is_collectable()
                     && (*(*t).as_object().unwrap()).get_marked() & BLACKBIT != 0
-                    && (*(*(*state).interpreter_top.stkidrel_pointer.sub(1)).as_object().unwrap()).get_marked() & WHITEBITS != 0
+                    && (*(*(*state).interpreter_top.stkidrel_pointer.sub(1))
+                        .as_object()
+                        .unwrap())
+                    .get_marked()
+                        & WHITEBITS
+                        != 0
                 {
                     ObjectWithGCList::luac_barrierback_(state, (*t).as_object().unwrap() as *mut ObjectWithGCList);
                 }
@@ -1923,7 +2090,10 @@ pub unsafe fn auxsetstr(state: *mut State, t: *const TValue, k: *const i8) {
 }
 pub unsafe fn lua_setglobal(state: *mut State, name: *const i8) {
     unsafe {
-        let registry = (*(*state).interpreter_global).global_lregistry.as_table().unwrap();
+        let registry = (*(*state).interpreter_global)
+            .global_lregistry
+            .as_table()
+            .unwrap();
         let mut global_table: TValue = TValue::new(TagVariant::NilNil);
         arr2obj(registry, 1, &mut global_table);
         auxsetstr(state, &global_table, name);
@@ -1976,11 +2146,21 @@ pub unsafe fn lua_seti(state: *mut State, index: i32, n: i64) {
 pub unsafe fn aux_rawset(state: *mut State, index: i32, key: *mut TValue, n: i32) {
     unsafe {
         let table: *mut Table = gettable(state, index);
-        luah_set(state, table, key, &mut (*(*state).interpreter_top.stkidrel_pointer.sub(1)));
+        luah_set(
+            state,
+            table,
+            key,
+            &mut (*(*state).interpreter_top.stkidrel_pointer.sub(1)),
+        );
         (*table).table_flags = ((*table).table_flags as u32 & !!(!0 << (TM_EQ as i32 + 1))) as u8;
         if (*(*state).interpreter_top.stkidrel_pointer.sub(1)).is_collectable()
             && (*(table as *mut Object)).get_marked() & BLACKBIT != 0
-            && (*(*(*state).interpreter_top.stkidrel_pointer.sub(1)).as_object().unwrap()).get_marked() & WHITEBITS != 0
+            && (*(*(*state).interpreter_top.stkidrel_pointer.sub(1))
+                .as_object()
+                .unwrap())
+            .get_marked()
+                & WHITEBITS
+                != 0
         {
             ObjectWithGCList::luac_barrierback_(state, &mut *(table as *mut ObjectWithGCList));
         }
@@ -1989,16 +2169,31 @@ pub unsafe fn aux_rawset(state: *mut State, index: i32, key: *mut TValue, n: i32
 }
 pub unsafe fn lua_rawset(state: *mut State, index: i32) {
     unsafe {
-        aux_rawset(state, index, &mut (*(*state).interpreter_top.stkidrel_pointer.sub(2)), 2);
+        aux_rawset(
+            state,
+            index,
+            &mut (*(*state).interpreter_top.stkidrel_pointer.sub(2)),
+            2,
+        );
     }
 }
 pub unsafe fn lua_rawseti(state: *mut State, index: i32, n: i64) {
     unsafe {
         let table: *mut Table = gettable(state, index);
-        luah_setint(state, table, n, &mut (*(*state).interpreter_top.stkidrel_pointer.sub(1)));
+        luah_setint(
+            state,
+            table,
+            n,
+            &mut (*(*state).interpreter_top.stkidrel_pointer.sub(1)),
+        );
         if (*(*state).interpreter_top.stkidrel_pointer.sub(1)).is_collectable()
             && (*(table as *mut Object)).get_marked() & BLACKBIT != 0
-            && (*(*(*state).interpreter_top.stkidrel_pointer.sub(1)).as_object().unwrap()).get_marked() & WHITEBITS != 0
+            && (*(*(*state).interpreter_top.stkidrel_pointer.sub(1))
+                .as_object()
+                .unwrap())
+            .get_marked()
+                & WHITEBITS
+                != 0
         {
             ObjectWithGCList::luac_barrierback_(state, &mut *(table as *mut ObjectWithGCList));
         }
@@ -2016,10 +2211,12 @@ pub unsafe fn lua_setmetatable(state: *mut State, index: i32) -> i32 {
         {
             metatable = null_mut();
         } else {
-            metatable = (*(*state).interpreter_top.stkidrel_pointer.sub(1)).as_table().unwrap()
+            metatable = (*(*state).interpreter_top.stkidrel_pointer.sub(1))
+                .as_table()
+                .unwrap()
         }
         match (*object).get_tagvariant().to_tag_type() {
-            | TagType::Table => {
+            TagType::Table => {
                 (*(*object).as_table().unwrap()).set_metatable(metatable);
                 if !metatable.is_null() {
                     if (*(*object).as_object().unwrap()).get_marked() & BLACKBIT != 0 && (*metatable).get_marked() & WHITEBITS != 0
@@ -2032,8 +2229,8 @@ pub unsafe fn lua_setmetatable(state: *mut State, index: i32) -> i32 {
                     }
                     luac_checkfinalizer(state, (*object).as_object().unwrap(), metatable);
                 }
-            },
-            | TagType::User => {
+            }
+            TagType::User => {
                 (*(*object).as_user().unwrap()).set_metatable(metatable);
                 if !metatable.is_null() {
                     if (*(*object).as_user().unwrap()).get_marked() & BLACKBIT != 0 && (*metatable).get_marked() & WHITEBITS != 0 {
@@ -2045,10 +2242,10 @@ pub unsafe fn lua_setmetatable(state: *mut State, index: i32) -> i32 {
                     }
                     luac_checkfinalizer(state, (*object).as_object().unwrap(), metatable);
                 }
-            },
-            | _ => {
+            }
+            _ => {
                 (*(*state).interpreter_global).global_metatables[(*object).get_tagvariant().to_tag_type() as usize] = metatable;
-            },
+            }
         }
         (*state).interpreter_top.stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer.sub(1);
         1
@@ -2061,12 +2258,19 @@ pub unsafe fn lua_setiuservalue(state: *mut State, index: i32, n: i32) -> i32 {
         if (n as u32).wrapping_sub(1_u32) >= (*(*o).as_user().unwrap()).user_countupvalues as u32 {
             res = 0;
         } else {
-            let io1: *mut TValue = &mut (*((*(*o).as_user().unwrap()).user_upvalues).as_mut_ptr().add((n - 1) as usize));
+            let io1: *mut TValue = &mut (*((*(*o).as_user().unwrap()).user_upvalues)
+                .as_mut_ptr()
+                .add((n - 1) as usize));
             let io2: *const TValue = &mut (*(*state).interpreter_top.stkidrel_pointer.sub(1));
             (*io1).copy_from(&*io2);
             if (*(*state).interpreter_top.stkidrel_pointer.sub(1)).is_collectable()
                 && (*(*o).as_object().unwrap()).get_marked() & BLACKBIT != 0
-                && (*(*(*state).interpreter_top.stkidrel_pointer.sub(1)).as_object().unwrap()).get_marked() & WHITEBITS != 0
+                && (*(*(*state).interpreter_top.stkidrel_pointer.sub(1))
+                    .as_object()
+                    .unwrap())
+                .get_marked()
+                    & WHITEBITS
+                    != 0
             {
                 ObjectWithGCList::luac_barrierback_(state, (*o).as_object().unwrap() as *mut ObjectWithGCList);
             }
@@ -2077,28 +2281,49 @@ pub unsafe fn lua_setiuservalue(state: *mut State, index: i32, n: i32) -> i32 {
     }
 }
 pub unsafe fn lua_load(
-    state: *mut State, reader: Reader, data: *mut std::ffi::c_void, chunkname: *const i8, mode: *const i8,
+    state: *mut State,
+    reader: Reader,
+    data: *mut std::ffi::c_void,
+    chunkname: *const i8,
+    mode: *const i8,
 ) -> Status {
     unsafe {
         let status = do_protected_parser(state, chunkname, mode, reader, data);
         if status == Status::OK {
-            let closure = (*(*state).interpreter_top.stkidrel_pointer.sub(1)).as_closure().unwrap();
+            let closure = (*(*state).interpreter_top.stkidrel_pointer.sub(1))
+                .as_closure()
+                .unwrap();
             if (*closure).closure_count_upvalues as i32 >= 1 {
-                let registry = (*(*state).interpreter_global).global_lregistry.as_table().unwrap();
+                let registry = (*(*state).interpreter_global)
+                    .global_lregistry
+                    .as_table()
+                    .unwrap();
                 let mut gt_val: TValue = TValue::new(TagVariant::NilNil);
                 arr2obj(registry, 1, &mut gt_val);
                 let gt = &mut gt_val as *mut TValue;
-                let io1: *mut TValue = (**((*closure).closure_upvalues).closureupvalue_lvalues.as_mut_ptr().add(0))
-                    .upvalue_v
-                    .upvaluea_p;
+                let io1: *mut TValue = (**((*closure).closure_upvalues)
+                    .closureupvalue_lvalues
+                    .as_mut_ptr()
+                    .add(0))
+                .upvalue_v
+                .upvaluea_p;
                 (*io1).copy_from(&*gt);
                 if (*gt).is_collectable()
-                    && (**((*closure).closure_upvalues).closureupvalue_lvalues.as_mut_ptr().add(0)).get_marked() & BLACKBIT != 0
+                    && (**((*closure).closure_upvalues)
+                        .closureupvalue_lvalues
+                        .as_mut_ptr()
+                        .add(0))
+                    .get_marked()
+                        & BLACKBIT
+                        != 0
                     && (*(*gt).as_object().unwrap()).get_marked() & WHITEBITS != 0
                 {
                     Object::luac_barrier_(
                         state,
-                        &mut *(*((*closure).closure_upvalues).closureupvalue_lvalues.as_mut_ptr().add(0) as *mut Object),
+                        &mut *(*((*closure).closure_upvalues)
+                            .closureupvalue_lvalues
+                            .as_mut_ptr()
+                            .add(0) as *mut Object),
                         &mut (*((*gt).as_object().unwrap())),
                     );
                 }
@@ -2122,7 +2347,11 @@ pub unsafe fn lua_error(state: *mut State) -> i32 {
 pub unsafe fn lua_next(state: *mut State, index: i32) -> i32 {
     unsafe {
         let table: *mut Table = gettable(state, index);
-        let more: i32 = luah_next(state, table, (*state).interpreter_top.stkidrel_pointer.sub(1));
+        let more: i32 = luah_next(
+            state,
+            table,
+            (*state).interpreter_top.stkidrel_pointer.sub(1),
+        );
         if more != 0 {
             (*state).interpreter_top.stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer.add(1);
         } else {
@@ -2170,7 +2399,12 @@ pub unsafe fn lua_setwarnf(state: *mut State, f: WarnFunction, arbitrary_data: *
 pub unsafe fn lua_getupvalue(state: *mut State, funcindex: i32, n: i32) -> *const i8 {
     unsafe {
         let mut value: *mut TValue = null_mut();
-        let name: *const i8 = aux_upvalue((*state).index_to_value(funcindex), n, &mut value, null_mut());
+        let name: *const i8 = aux_upvalue(
+            (*state).index_to_value(funcindex),
+            n,
+            &mut value,
+            null_mut(),
+        );
         if !name.is_null() {
             let io1: *mut TValue = &mut (*(*state).interpreter_top.stkidrel_pointer);
             let io2: *const TValue = value;
@@ -2227,10 +2461,10 @@ pub unsafe fn lua_upvalueid(state: *mut State, fidx: i32, n: i32) -> *mut std::f
     unsafe {
         let fi: *mut TValue = (*state).index_to_value(fidx);
         match (*fi).get_tagvariant() {
-            | TagVariant::ClosureL => {
+            TagVariant::ClosureL => {
                 return *getupvalref(state, fidx, n, null_mut()) as *mut std::ffi::c_void;
-            },
-            | TagVariant::ClosureC => {
+            }
+            TagVariant::ClosureC => {
                 let closure: *mut Closure = (*fi).as_closure().unwrap();
                 if 1 <= n && n <= (*closure).closure_count_upvalues as i32 {
                     return &mut *((*closure).closure_upvalues)
@@ -2238,9 +2472,9 @@ pub unsafe fn lua_upvalueid(state: *mut State, fidx: i32, n: i32) -> *mut std::f
                         .as_mut_ptr()
                         .add((n - 1) as usize) as *mut TValue as *mut std::ffi::c_void;
                 }
-            },
-            | TagVariant::ClosureCFunction => {},
-            | _ => return null_mut(),
+            }
+            TagVariant::ClosureCFunction => {}
+            _ => return null_mut(),
         }
         null_mut()
     }
@@ -2252,7 +2486,11 @@ pub unsafe fn lua_upvaluejoin(state: *mut State, fidx1: i32, n1: i32, fidx2: i32
         let up2: *mut *mut UpValue = getupvalref(state, fidx2, n2, null_mut());
         *up1 = *up2;
         if (*f1).get_marked() & BLACKBIT != 0 && (**up1).get_marked() & WHITEBITS != 0 {
-            Object::luac_barrier_(state, &mut *(f1 as *mut Object), &mut *(*up1 as *mut Object));
+            Object::luac_barrier_(
+                state,
+                &mut *(f1 as *mut Object),
+                &mut *(*up1 as *mut Object),
+            );
         }
     }
 }
@@ -2329,7 +2567,10 @@ pub unsafe fn luae_shrinkci(state: *mut State) {
                 (*callinfo).callinfo_next = next_next_call_info;
                 (*state).interpreter_count_callinfo -= 1;
                 (*state).interpreter_count_callinfo;
-                (*state).free_memory(next_call_info as *mut std::ffi::c_void, size_of::<CallInfo>());
+                (*state).free_memory(
+                    next_call_info as *mut std::ffi::c_void,
+                    size_of::<CallInfo>(),
+                );
                 if next_next_call_info.is_null() {
                     break;
                 }
@@ -2405,13 +2646,20 @@ pub unsafe fn f_luaopen(state: *mut State, mut _ud: *mut std::ffi::c_void) {
         luat_init(state);
         luax_init(state);
         (*global).global_gcstep = 0;
-        (*global).global_nonevalue.tvalue_set_tag_variant(TagVariant::NilNil);
+        (*global)
+            .global_nonevalue
+            .tvalue_set_tag_variant(TagVariant::NilNil);
     }
 }
 pub unsafe fn close_state(state: *mut State) {
     unsafe {
         let global: *mut Global = (*state).interpreter_global;
-        if (*global).global_nonevalue.get_tagvariant().to_tag_type().is_nil() {
+        if (*global)
+            .global_nonevalue
+            .get_tagvariant()
+            .to_tag_type()
+            .is_nil()
+        {
             (*state).interpreter_callinfo = &mut (*state).interpreter_base_callinfo;
             (*state).interpreter_error_function = 0;
             do_close_protected(state, 1_i64, Status::OK);
@@ -2421,8 +2669,13 @@ pub unsafe fn close_state(state: *mut State) {
             (*global).luac_freeallobjects(state);
         }
         (*state).free_memory(
-            (*(*state).interpreter_global).global_stringtable.stringtable_hash as *mut std::ffi::c_void,
-            (*(*state).interpreter_global).global_stringtable.stringtable_size * size_of::<*mut TString>(),
+            (*(*state).interpreter_global)
+                .global_stringtable
+                .stringtable_hash as *mut std::ffi::c_void,
+            (*(*state).interpreter_global)
+                .global_stringtable
+                .stringtable_size
+                * size_of::<*mut TString>(),
         );
         freestack(state);
         std::alloc::dealloc(state as *mut u8, std::alloc::Layout::new::<State>());
@@ -2438,9 +2691,15 @@ pub unsafe fn lua_newthread(state: *mut State) -> *mut State {
         (*io).set_object(ret as *mut Object, TagVariant::State);
         (*state).interpreter_top.stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer.add(1);
         (*ret).preinit_thread(global);
-        write_volatile(&mut (*ret).interpreter_hook_mask as *mut i32, (*state).interpreter_hook_mask);
+        write_volatile(
+            &mut (*ret).interpreter_hook_mask as *mut i32,
+            (*state).interpreter_hook_mask,
+        );
         (*ret).interpreter_base_hookcount = (*state).interpreter_base_hookcount;
-        write_volatile(&mut (*ret).interpreter_hook as *mut HookFunction, (*state).interpreter_hook);
+        write_volatile(
+            &mut (*ret).interpreter_hook as *mut HookFunction,
+            (*state).interpreter_hook,
+        );
         (*ret).interpreter_hook_count = (*ret).interpreter_base_hookcount;
         stack_init(ret, state);
         ret
@@ -2464,7 +2723,10 @@ pub unsafe fn luae_resetthread(state: *mut State, mut status: Status) -> Status 
         } else {
             (*state).interpreter_top.stkidrel_pointer = ((*state).interpreter_stack.stkidrel_pointer).add(1);
         }
-        (*callinfo).callinfo_top.stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer.add(LUA_MINSTACK as usize);
+        (*callinfo).callinfo_top.stkidrel_pointer = (*state)
+            .interpreter_top
+            .stkidrel_pointer
+            .add(LUA_MINSTACK as usize);
         luad_reallocstack(
             state,
             ((*callinfo).callinfo_top.stkidrel_pointer).offset_from((*state).interpreter_stack.stkidrel_pointer) as i32,
@@ -2476,7 +2738,10 @@ pub unsafe fn luae_resetthread(state: *mut State, mut status: Status) -> Status 
 pub unsafe fn luad_throwbaselevel(state: *mut State, status: Status) -> ! {
     unsafe {
         if !(*state).interpreter_longjump.is_null() {
-            std::panic::panic_any(LuaError { status, unwind_to_base: true });
+            std::panic::panic_any(LuaError {
+                status,
+                unwind_to_base: true,
+            });
         } else {
             luad_throw(state, status);
         }
@@ -2507,7 +2772,11 @@ pub unsafe fn luae_warning(state: *mut State, message: *const i8, tocont: i32) {
     unsafe {
         let warn_function: WarnFunction = (*(*state).interpreter_global).global_warnfunction;
         if warn_function.is_some() {
-            warn_function.expect("non-null function pointer")((*(*state).interpreter_global).global_warnuserdata, message, tocont);
+            warn_function.expect("non-null function pointer")(
+                (*(*state).interpreter_global).global_warnuserdata,
+                message,
+                tocont,
+            );
         }
     }
 }
@@ -2532,10 +2801,16 @@ pub unsafe fn lua_sethook(state: *mut State, mut function: HookFunction, mut mas
             mask = 0;
             function = None;
         }
-        write_volatile(&mut (*state).interpreter_hook as *mut HookFunction, function);
+        write_volatile(
+            &mut (*state).interpreter_hook as *mut HookFunction,
+            function,
+        );
         (*state).interpreter_base_hookcount = count;
         (*state).interpreter_hook_count = (*state).interpreter_base_hookcount;
-        write_volatile(&mut (*state).interpreter_hook_mask as *mut i32, mask as u8 as i32);
+        write_volatile(
+            &mut (*state).interpreter_hook_mask as *mut i32,
+            mask as u8 as i32,
+        );
         if mask != 0 {
             CallInfo::settraps((*state).interpreter_callinfo);
         }
@@ -2591,9 +2866,11 @@ pub unsafe fn varinfo(state: *mut State, tvalue: *const TValue) -> *const i8 {
                 let reg: i32 = CallInfo::in_stack(callinfo, tvalue);
                 if reg >= 0 {
                     kind = getobjname(
-                        (*(*(*callinfo).callinfo_function.stkidrel_pointer).as_closure().unwrap())
-                            .closure_payload
-                            .closurepayload_lprototype,
+                        (*(*(*callinfo).callinfo_function.stkidrel_pointer)
+                            .as_closure()
+                            .unwrap())
+                        .closure_payload
+                        .closurepayload_lprototype,
                         CallInfo::currentpc(callinfo),
                         reg,
                         &mut name,
@@ -2607,7 +2884,11 @@ pub unsafe fn varinfo(state: *mut State, tvalue: *const TValue) -> *const i8 {
 pub unsafe fn typeerror(state: *mut State, tvalue: *const TValue, op: *const i8, extra: *const i8) -> ! {
     unsafe {
         let t: *const i8 = luat_objtypename(state, tvalue);
-        luag_runerror(state, c"attempt to %s a %s value%s".as_ptr(), &[op.into(), t.into(), extra.into()]);
+        luag_runerror(
+            state,
+            c"attempt to %s a %s value%s".as_ptr(),
+            &[op.into(), t.into(), extra.into()],
+        );
     }
 }
 pub unsafe fn luag_typeerror(state: *mut State, tvalue: *const TValue, op: *const i8) -> ! {
@@ -2640,10 +2921,10 @@ pub unsafe fn luag_forerror(state: *mut State, tvalue: *const TValue, what: *con
 pub unsafe fn luag_concaterror(state: *mut State, mut p1: *const TValue, p2: *const TValue) -> ! {
     unsafe {
         match (*p1).get_tagvariant().to_tag_type() {
-            | TagType::String | TagType::Numeric => {
+            TagType::String | TagType::Numeric => {
                 p1 = p2;
-            },
-            | _ => {},
+            }
+            _ => {}
         }
         luag_typeerror(state, p1, c"concatenate".as_ptr());
     }
@@ -2662,7 +2943,11 @@ pub unsafe fn luag_tointerror(state: *mut State, p1: *const TValue, mut p2: *con
         if F2I::Equal.convert_tv_i64(p1, &mut temp) == 0 {
             p2 = p1;
         }
-        luag_runerror(state, c"number%s has no integer representation".as_ptr(), &[varinfo(state, p2).into()]);
+        luag_runerror(
+            state,
+            c"number%s has no integer representation".as_ptr(),
+            &[varinfo(state, p2).into()],
+        );
     }
 }
 pub unsafe fn luag_ordererror(state: *mut State, p1: *const TValue, p2: *const TValue) -> ! {
@@ -2670,9 +2955,17 @@ pub unsafe fn luag_ordererror(state: *mut State, p1: *const TValue, p2: *const T
         let t1: *const i8 = luat_objtypename(state, p1);
         let t2: *const i8 = luat_objtypename(state, p2);
         if std::ffi::CStr::from_ptr(t1) == std::ffi::CStr::from_ptr(t2) {
-            luag_runerror(state, c"attempt to compare two %s values".as_ptr(), &[t1.into()]);
+            luag_runerror(
+                state,
+                c"attempt to compare two %s values".as_ptr(),
+                &[t1.into()],
+            );
         } else {
-            luag_runerror(state, c"attempt to compare %s with %s".as_ptr(), &[t1.into(), t2.into()]);
+            luag_runerror(
+                state,
+                c"attempt to compare %s with %s".as_ptr(),
+                &[t1.into(), t2.into()],
+            );
         };
     }
 }
@@ -2682,8 +2975,16 @@ pub unsafe fn luag_addinfo(state: *mut State, message: *const i8, src: *mut TStr
             luao_pushfstring(state, c"?:?: %s".as_ptr(), &[message.into()])
         } else {
             let mut buffer: [i8; LUA_IDSIZE] = [0; LUA_IDSIZE];
-            luao_chunkid(buffer.as_mut_ptr(), (*src).get_contents_mut(), (*src).get_length());
-            luao_pushfstring(state, c"%s:%d: %s".as_ptr(), &[buffer.as_mut_ptr().into(), line.into(), message.into()])
+            luao_chunkid(
+                buffer.as_mut_ptr(),
+                (*src).get_contents_mut(),
+                (*src).get_length(),
+            );
+            luao_pushfstring(
+                state,
+                c"%s:%d: %s".as_ptr(),
+                &[buffer.as_mut_ptr().into(), line.into(), message.into()],
+            )
         }
     }
 }
@@ -2724,9 +3025,11 @@ pub unsafe fn luag_runerror(state: *mut State, fmt: *const i8, args: &[crate::fm
             luag_addinfo(
                 state,
                 message,
-                (*(*(*(*callinfo).callinfo_function.stkidrel_pointer).as_closure().unwrap())
-                    .closure_payload
-                    .closurepayload_lprototype)
+                (*(*(*(*callinfo).callinfo_function.stkidrel_pointer)
+                    .as_closure()
+                    .unwrap())
+                .closure_payload
+                .closurepayload_lprototype)
                     .prototype_source,
                 CallInfo::getcurrentline(callinfo),
             );
@@ -2741,9 +3044,11 @@ pub unsafe fn luag_runerror(state: *mut State, fmt: *const i8, args: &[crate::fm
 pub unsafe fn luag_tracecall(state: *mut State) -> i32 {
     unsafe {
         let callinfo = (*state).interpreter_callinfo;
-        let p: *mut Prototype = (*(*(*callinfo).callinfo_function.stkidrel_pointer).as_closure().unwrap())
-            .closure_payload
-            .closurepayload_lprototype;
+        let p: *mut Prototype = (*(*(*callinfo).callinfo_function.stkidrel_pointer)
+            .as_closure()
+            .unwrap())
+        .closure_payload
+        .closurepayload_lprototype;
         write_volatile(&mut (*callinfo).callinfo_u.l.trap as *mut i32, 1);
         if std::ptr::eq(
             (*callinfo).callinfo_u.l.saved_program_counter,
@@ -2762,9 +3067,11 @@ pub unsafe fn luag_traceexec(state: *mut State, mut program_counter: *const u32)
     unsafe {
         let callinfo = (*state).interpreter_callinfo;
         let mask: u8 = (*state).interpreter_hook_mask as u8;
-        let p: *const Prototype = (*(*(*callinfo).callinfo_function.stkidrel_pointer).as_closure().unwrap())
-            .closure_payload
-            .closurepayload_lprototype;
+        let p: *const Prototype = (*(*(*callinfo).callinfo_function.stkidrel_pointer)
+            .as_closure()
+            .unwrap())
+        .closure_payload
+        .closurepayload_lprototype;
         if mask as i32 & (HOOKMASK_LINE | HOOKMASK_COUNT) == 0 {
             write_volatile(&mut (*callinfo).callinfo_u.l.trap as *mut i32, 0);
             return 0;
@@ -2828,19 +3135,19 @@ pub unsafe fn intarith(state: *mut State, op: i32, v1: i64, v2: i64) -> i64 {
         const SHL: i32 = OperatorBinary::ShiftLeft as i32;
         const SHR: i32 = OperatorBinary::ShiftRight as i32;
         match op {
-            | ADD => (v1 as usize).wrapping_add(v2 as usize) as i64,
-            | SUB => (v1 as usize).wrapping_sub(v2 as usize) as i64,
-            | MUL => (v1 as usize).wrapping_mul(v2 as usize) as i64,
-            | MOD => luav_mod(state, v1, v2),
-            | IDIV => luav_idiv(state, v1, v2),
-            | BAND => (v1 as usize & v2 as usize) as i64,
-            | BOR => (v1 as usize | v2 as usize) as i64,
-            | BXOR => (v1 as usize ^ v2 as usize) as i64,
-            | SHL => luav_shiftl(v1, v2),
-            | SHR => luav_shiftl(v1, (0usize).wrapping_sub(v2 as usize) as i64),
-            | ARITH_UNM => (0usize).wrapping_sub(v1 as usize) as i64,
-            | ARITH_BNOT => (!(0usize) ^ v1 as usize) as i64,
-            | _ => 0,
+            ADD => (v1 as usize).wrapping_add(v2 as usize) as i64,
+            SUB => (v1 as usize).wrapping_sub(v2 as usize) as i64,
+            MUL => (v1 as usize).wrapping_mul(v2 as usize) as i64,
+            MOD => luav_mod(state, v1, v2),
+            IDIV => luav_idiv(state, v1, v2),
+            BAND => (v1 as usize & v2 as usize) as i64,
+            BOR => (v1 as usize | v2 as usize) as i64,
+            BXOR => (v1 as usize ^ v2 as usize) as i64,
+            SHL => luav_shiftl(v1, v2),
+            SHR => luav_shiftl(v1, (0usize).wrapping_sub(v2 as usize) as i64),
+            ARITH_UNM => (0usize).wrapping_sub(v1 as usize) as i64,
+            ARITH_BNOT => (!(0usize) ^ v1 as usize) as i64,
+            _ => 0,
         }
     }
 }
@@ -2854,21 +3161,21 @@ pub unsafe fn numarith(state: *mut State, op: i32, v1: f64, v2: f64) -> f64 {
         const DIV: i32 = OperatorBinary::Divide as i32;
         const IDIV: i32 = OperatorBinary::IntegralDivide as i32;
         match op {
-            | ADD => v1 + v2,
-            | SUB => v1 - v2,
-            | MUL => v1 * v2,
-            | DIV => v1 / v2,
-            | POW => {
+            ADD => v1 + v2,
+            SUB => v1 - v2,
+            MUL => v1 * v2,
+            DIV => v1 / v2,
+            POW => {
                 if v2 == 2.0 {
                     v1 * v1
                 } else {
                     v1.powf(v2)
                 }
-            },
-            | IDIV => (v1 / v2).floor(),
-            | ARITH_UNM => -v1,
-            | MOD => luav_modf(state, v1, v2),
-            | _ => 0.0,
+            }
+            IDIV => (v1 / v2).floor(),
+            ARITH_UNM => -v1,
+            MOD => luav_modf(state, v1, v2),
+            _ => 0.0,
         }
     }
 }
@@ -2883,7 +3190,7 @@ pub unsafe fn luao_rawarith(state: *mut State, op: i32, p1: *const TValue, p2: *
         const DIVIDE: i32 = OperatorBinary::Divide as i32;
         const POWER: i32 = OperatorBinary::Power as i32;
         match op {
-            | BITWISE_AND | BITWISE_OR | BITWISE_XOR | SHIFT_LEFT | SHIFT_RIGHT | EQUAL => {
+            BITWISE_AND | BITWISE_OR | BITWISE_XOR | SHIFT_LEFT | SHIFT_RIGHT | EQUAL => {
                 let mut i1: i64 = 0;
                 let mut i2: i64 = 0;
                 if (if (*p1).get_tagvariant() == TagVariant::NumericInteger {
@@ -2904,8 +3211,8 @@ pub unsafe fn luao_rawarith(state: *mut State, op: i32, p1: *const TValue, p2: *
                 } else {
                     0
                 }
-            },
-            | DIVIDE | POWER => {
+            }
+            DIVIDE | POWER => {
                 let mut n1: f64 = 0.0;
                 let mut n2: f64 = 0.0;
                 if (if (*p1).get_tagvariant() == TagVariant::NumericNumber {
@@ -2936,13 +3243,18 @@ pub unsafe fn luao_rawarith(state: *mut State, op: i32, p1: *const TValue, p2: *
                 } else {
                     0
                 }
-            },
-            | _ => {
+            }
+            _ => {
                 let mut n1: f64 = 0.0;
                 let mut n2: f64 = 0.0;
                 if (*p1).get_tagvariant() == TagVariant::NumericInteger && (*p2).get_tagvariant() == TagVariant::NumericInteger {
                     let io: *mut TValue = res;
-                    (*io).set_integer(intarith(state, op, (*p1).as_integer().unwrap(), (*p2).as_integer().unwrap()));
+                    (*io).set_integer(intarith(
+                        state,
+                        op,
+                        (*p1).as_integer().unwrap(),
+                        (*p2).as_integer().unwrap(),
+                    ));
                     1
                 } else if (if (*p1).get_tagvariant() == TagVariant::NumericNumber {
                     n1 = (*p1).as_number().unwrap();
@@ -2973,7 +3285,7 @@ pub unsafe fn luao_rawarith(state: *mut State, op: i32, p1: *const TValue, p2: *
                 } else {
                     0
                 }
-            },
+            }
         }
     }
 }
@@ -2989,63 +3301,72 @@ pub unsafe fn luao_pushvfstring(state: *mut State, mut fmt: *const i8, args: &[c
             }
             buff_fs.add_string(fmt, e.offset_from(fmt) as usize);
             match Character::from(*e.add(1) as i32) {
-                | Character::LowerS => {
+                Character::LowerS => {
                     let mut s: *const i8 = args[arg_idx].as_str();
                     arg_idx += 1;
                     if s.is_null() {
                         s = c"(null)".as_ptr();
                     }
                     buff_fs.add_string(s, cstr_len(s));
-                },
-                | Character::LowerC => {
+                }
+                Character::LowerC => {
                     let c: i8 = args[arg_idx].as_int() as u8 as i8;
                     arg_idx += 1;
                     buff_fs.add_string(&c, 1_usize);
-                },
-                | Character::LowerD => {
+                }
+                Character::LowerD => {
                     let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
                     tvalue.set_integer(args[arg_idx].as_int() as i64);
                     arg_idx += 1;
                     buff_fs.add_number(&mut tvalue);
-                },
-                | Character::UpperI => {
+                }
+                Character::UpperI => {
                     let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
                     tvalue.set_integer(args[arg_idx].as_long());
                     arg_idx += 1;
                     buff_fs.add_number(&mut tvalue);
-                },
-                | Character::LowerF => {
+                }
+                Character::LowerF => {
                     let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
                     tvalue.set_number(args[arg_idx].as_float());
                     arg_idx += 1;
                     buff_fs.add_number(&mut tvalue);
-                },
-                | Character::LowerP => {
-                    let size = 3_usize.wrapping_mul(size_of::<*mut std::ffi::c_void>()).wrapping_add(8);
+                }
+                Character::LowerP => {
+                    let size = 3_usize
+                        .wrapping_mul(size_of::<*mut std::ffi::c_void>())
+                        .wrapping_add(8);
                     let bf: *mut i8 = buff_fs.get_raw(size);
                     let p: *mut std::ffi::c_void = args[arg_idx].as_ptr();
                     arg_idx += 1;
                     let length = snprintf_pointer(bf, size, p);
                     buff_fs.add_length(length as usize);
-                },
-                | Character::UpperU => {
+                }
+                Character::UpperU => {
                     let mut bf: [i8; 8] = [0; 8];
                     let length: i32 = luao_utf8esc(bf.as_mut_ptr(), args[arg_idx].as_long() as usize);
                     arg_idx += 1;
                     buff_fs.add_string(bf.as_mut_ptr().add(8).sub(length as usize), length as usize);
-                },
-                | Character::Percent => {
+                }
+                Character::Percent => {
                     buff_fs.add_string(c"%".as_ptr(), 1_usize);
-                },
-                | _ => {
-                    luag_runerror(state, c"invalid option '%%%c' to 'lua_pushfstring'".as_ptr(), &[(*e.add(1) as i32).into()]);
-                },
+                }
+                _ => {
+                    luag_runerror(
+                        state,
+                        c"invalid option '%%%c' to 'lua_pushfstring'".as_ptr(),
+                        &[(*e.add(1) as i32).into()],
+                    );
+                }
             }
             fmt = e.add(2);
         }
         buff_fs.add_string(fmt, cstr_len(fmt));
         buff_fs.clear();
-        (*(*(*state).interpreter_top.stkidrel_pointer.sub(1)).as_string().unwrap()).get_contents_mut()
+        (*(*(*state).interpreter_top.stkidrel_pointer.sub(1))
+            .as_string()
+            .unwrap())
+        .get_contents_mut()
     }
 }
 pub unsafe fn luao_pushfstring(state: *mut State, fmt: *const i8, args: &[crate::fmtarg::FmtArg]) -> *const i8 {
@@ -3084,7 +3405,9 @@ pub unsafe fn luat_init(state: *mut State) {
             (*(*state).interpreter_global).global_tmname[i as usize] = luas_new(state, EVENT_NAMES[i as usize]);
             fix_object_state(
                 state,
-                &mut (*(*((*(*state).interpreter_global).global_tmname).as_mut_ptr().add(i as usize) as *mut Object)),
+                &mut (*(*((*(*state).interpreter_global).global_tmname)
+                    .as_mut_ptr()
+                    .add(i as usize) as *mut Object)),
             );
         }
     }
@@ -3093,20 +3416,23 @@ pub unsafe fn luat_gettmbyobj(state: *mut State, tvalue: *const TValue, event: u
     unsafe {
         let metatable: *mut Table;
         match (*tvalue).get_tagvariant().to_tag_type() {
-            | TagType::Table => {
+            TagType::Table => {
                 metatable = (*(*tvalue).as_table().unwrap()).get_metatable();
-            },
-            | TagType::User => {
+            }
+            TagType::User => {
                 metatable = (*(*tvalue).as_user().unwrap()).get_metatable();
-            },
-            | _ => {
+            }
+            _ => {
                 metatable = (*(*state).interpreter_global).global_metatables[(*tvalue).get_tagvariant().to_tag_type() as usize];
-            },
+            }
         }
         if metatable.is_null() {
             &mut (*(*state).interpreter_global).global_nonevalue as *mut TValue as *const TValue
         } else {
-            luah_getshortstr(metatable, (*(*state).interpreter_global).global_tmname[event as usize])
+            luah_getshortstr(
+                metatable,
+                (*(*state).interpreter_global).global_tmname[event as usize],
+            )
         }
     }
 }
@@ -3188,16 +3514,16 @@ pub unsafe fn luat_trybintm(state: *mut State, p1: *const TValue, p2: *const TVa
     unsafe {
         if callbintm(state, p1, p2, res, event) == 0 {
             match event {
-                | TM_BAND | TM_BOR | TM_BXOR | TM_SHL | TM_SHR | TM_BNOT => {
+                TM_BAND | TM_BOR | TM_BXOR | TM_SHL | TM_SHR | TM_BNOT => {
                     if (*p1).get_tagvariant().to_tag_type().is_numeric() && (*p2).get_tagvariant().to_tag_type().is_numeric() {
                         luag_tointerror(state, p1, p2);
                     } else {
                         luag_opinterror(state, p1, p2, c"perform bitwise operation on".as_ptr());
                     }
-                },
-                | _ => {
+                }
+                _ => {
                     luag_opinterror(state, p1, p2, c"perform arithmetic on".as_ptr());
-                },
+                }
             }
         }
     }
@@ -3229,7 +3555,14 @@ pub unsafe fn luat_trybinitm(state: *mut State, p1: *const TValue, i2: i64, flip
 }
 pub unsafe fn luat_callordertm(state: *mut State, p1: *const TValue, p2: *const TValue, event: u32) -> i32 {
     unsafe {
-        if callbintm(state, p1, p2, (*state).interpreter_top.stkidrel_pointer, event) != 0 {
+        if callbintm(
+            state,
+            p1,
+            p2,
+            (*state).interpreter_top.stkidrel_pointer,
+            event,
+        ) != 0
+        {
             return !((*(*state).interpreter_top.stkidrel_pointer).get_tagvariant() == TagVariant::BooleanFalse
                 || (*(*state).interpreter_top.stkidrel_pointer)
                     .get_tagvariant()
@@ -3266,7 +3599,10 @@ pub unsafe fn luat_adjustvarargs(state: *mut State, nfixparams: i32, callinfo: *
         let nextra: i32 = actual - nfixparams;
         if (*p).prototype_needsvarargtable {
             // Create a real table for the named vararg parameter
-            let vararg_start = (*callinfo).callinfo_function.stkidrel_pointer.add((nfixparams + 1) as usize);
+            let vararg_start = (*callinfo)
+                .callinfo_function
+                .stkidrel_pointer
+                .add((nfixparams + 1) as usize);
             let table: *mut Table = luah_new(state);
             // Push the table on the stack temporarily
             let top = (*state).interpreter_top.stkidrel_pointer;
@@ -3299,7 +3635,10 @@ pub unsafe fn luat_adjustvarargs(state: *mut State, nfixparams: i32, callinfo: *
             }
             // Move the table to the vararg parameter slot (func + nfixparams + 1)
             let table_src = (*state).interpreter_top.stkidrel_pointer.sub(1);
-            let dest = (*callinfo).callinfo_function.stkidrel_pointer.add((nfixparams + 1) as usize);
+            let dest = (*callinfo)
+                .callinfo_function
+                .stkidrel_pointer
+                .add((nfixparams + 1) as usize);
             (*dest).copy_from(&*table_src);
             (*state).interpreter_top.stkidrel_pointer = table_src;
         } else {
@@ -3335,7 +3674,10 @@ pub unsafe fn luat_adjustvarargs(state: *mut State, nfixparams: i32, callinfo: *
 pub unsafe fn luat_getvarargs(state: *mut State, callinfo: *mut CallInfo, mut where_0: *mut TValue, mut wanted: i32, vatab: i32) {
     unsafe {
         let h: *mut Table = if vatab >= 0 {
-            let slot = (*callinfo).callinfo_function.stkidrel_pointer.add((vatab + 1) as usize);
+            let slot = (*callinfo)
+                .callinfo_function
+                .stkidrel_pointer
+                .add((vatab + 1) as usize);
             (*slot).as_table().unwrap()
         } else {
             null_mut()
@@ -3593,7 +3935,11 @@ pub unsafe fn sweep2old(state: *mut State, mut p: *mut *mut Object) {
     }
 }
 pub unsafe fn sweepgen(
-    state: *mut State, global: *mut Global, mut p: *mut *mut Object, limit: *mut Object, pfirstold1: *mut *mut Object,
+    state: *mut State,
+    global: *mut Global,
+    mut p: *mut *mut Object,
+    limit: *mut Object,
+    pfirstold1: *mut *mut Object,
     paddedold: *mut i64,
 ) -> *mut *mut Object {
     unsafe {
@@ -3652,12 +3998,20 @@ pub unsafe fn checkclosemth(state: *mut State, level: *mut TValue) {
     unsafe {
         let tm: *const TValue = luat_gettmbyobj(state, &(*level), TM_CLOSE);
         if (*tm).get_tagvariant().to_tag_type().is_nil() {
-            let index: i32 = level.offset_from((*(*state).interpreter_callinfo).callinfo_function.stkidrel_pointer) as i32;
+            let index: i32 = level.offset_from(
+                (*(*state).interpreter_callinfo)
+                    .callinfo_function
+                    .stkidrel_pointer,
+            ) as i32;
             let mut vname: *const i8 = CallInfo::luag_findlocal(state, (*state).interpreter_callinfo, index, null_mut());
             if vname.is_null() {
                 vname = c"?".as_ptr();
             }
-            luag_runerror(state, c"variable '%s' got a non-closable value".as_ptr(), &[vname.into()]);
+            luag_runerror(
+                state,
+                c"variable '%s' got a non-closable value".as_ptr(),
+                &[vname.into()],
+            );
         }
     }
 }
@@ -3713,7 +4067,11 @@ pub unsafe fn luaf_closeupval(state: *mut State, level: *mut TValue) {
                     && (*uv).get_marked() & BLACKBIT != 0
                     && (*(*slot).as_object().unwrap()).get_marked() & WHITEBITS != 0
                 {
-                    Object::luac_barrier_(state, &mut *(uv as *mut Object), &mut (*((*slot).as_object().unwrap())));
+                    Object::luac_barrier_(
+                        state,
+                        &mut *(uv as *mut Object),
+                        &mut (*((*slot).as_object().unwrap())),
+                    );
                 }
             }
         }
@@ -3744,7 +4102,12 @@ pub unsafe fn luaf_close(state: *mut State, mut level: *mut TValue, status: Stat
     }
 }
 pub unsafe fn luay_parser(
-    state: *mut State, zio: *mut ZIO, buffer: *mut Buffer, dynamic_data: *mut DynamicData, name: *const i8, firstchar: i32,
+    state: *mut State,
+    zio: *mut ZIO,
+    buffer: *mut Buffer,
+    dynamic_data: *mut DynamicData,
+    name: *const i8,
+    firstchar: i32,
 ) -> *mut Closure {
     unsafe {
         let mut lexstate: LexicalState = LexicalState::new();
@@ -3824,19 +4187,37 @@ pub unsafe fn pushclosure(state: *mut State, p: *mut Prototype, encup: *mut *mut
         (*io).set_object(ncl as *mut Object, TagVariant::ClosureL);
         for i in 0..count_upvalues {
             if (*uv.add(i)).upvaluedescription_isinstack {
-                let upvalue_slot = &mut *((*ncl).closure_upvalues).closureupvalue_lvalues.as_mut_ptr().add(i);
-                *upvalue_slot = luaf_findupval(state, base.add((*uv.add(i)).upvaluedescription_index as usize));
+                let upvalue_slot = &mut *((*ncl).closure_upvalues)
+                    .closureupvalue_lvalues
+                    .as_mut_ptr()
+                    .add(i);
+                *upvalue_slot = luaf_findupval(
+                    state,
+                    base.add((*uv.add(i)).upvaluedescription_index as usize),
+                );
             } else {
-                let upvalue_slot = &mut *((*ncl).closure_upvalues).closureupvalue_lvalues.as_mut_ptr().add(i);
+                let upvalue_slot = &mut *((*ncl).closure_upvalues)
+                    .closureupvalue_lvalues
+                    .as_mut_ptr()
+                    .add(i);
                 *upvalue_slot = *encup.add((*uv.add(i)).upvaluedescription_index as usize);
             }
             if (*ncl).get_marked() & BLACKBIT != 0
-                && (**((*ncl).closure_upvalues).closureupvalue_lvalues.as_mut_ptr().add(i)).get_marked() & WHITEBITS != 0
+                && (**((*ncl).closure_upvalues)
+                    .closureupvalue_lvalues
+                    .as_mut_ptr()
+                    .add(i))
+                .get_marked()
+                    & WHITEBITS
+                    != 0
             {
                 Object::luac_barrier_(
                     state,
                     &mut *(ncl as *mut Object),
-                    &mut *(*((*ncl).closure_upvalues).closureupvalue_lvalues.as_mut_ptr().add(i) as *mut Object),
+                    &mut *(*((*ncl).closure_upvalues)
+                        .closureupvalue_lvalues
+                        .as_mut_ptr()
+                        .add(i) as *mut Object),
                 );
             }
         }
@@ -3849,14 +4230,14 @@ pub unsafe fn luav_finishop(state: *mut State) {
         let inst: u32 = *((*callinfo).callinfo_u.l.saved_program_counter).sub(1);
         let op: u32 = inst & MASK_OP;
         match op {
-            | OPCODE_MMBIN | OPCODE_MMBINI | OPCODE_MMBINK => {
+            OPCODE_MMBIN | OPCODE_MMBINI | OPCODE_MMBINK => {
                 let io1: *mut TValue =
                     &mut (*base.add((*((*callinfo).callinfo_u.l.saved_program_counter).sub(2) >> POSITION_A & MASK_A) as usize));
                 (*state).interpreter_top.stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer.sub(1);
                 let io2: *const TValue = &mut (*(*state).interpreter_top.stkidrel_pointer);
                 (*io1).copy_from(&*io2);
-            },
-            | OPCODE_UNM
+            }
+            OPCODE_UNM
             | OPCODE_BNOT
             | OPCODE_LEN
             | OPCODE_GET_TABLE_UPVALUE
@@ -3868,8 +4249,8 @@ pub unsafe fn luav_finishop(state: *mut State) {
                 (*state).interpreter_top.stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer.sub(1);
                 let io2: *const TValue = &mut (*(*state).interpreter_top.stkidrel_pointer);
                 (*io1).copy_from(&*io2);
-            },
-            | OPCODE_LT | OPCODE_LE | OPCODE_LTI | OPCODE_LEI | OPCODE_GTI | OPCODE_GEI | OPCODE_EQ => {
+            }
+            OPCODE_LT | OPCODE_LE | OPCODE_LTI | OPCODE_LEI | OPCODE_GTI | OPCODE_GEI | OPCODE_EQ => {
                 let res: i32 = !((*(*state).interpreter_top.stkidrel_pointer.sub(1)).get_tagvariant() == TagVariant::BooleanFalse
                     || (*(*state).interpreter_top.stkidrel_pointer.sub(1))
                         .get_tagvariant()
@@ -3880,8 +4261,8 @@ pub unsafe fn luav_finishop(state: *mut State) {
                     (*callinfo).callinfo_u.l.saved_program_counter = ((*callinfo).callinfo_u.l.saved_program_counter).add(1);
                     (*callinfo).callinfo_u.l.saved_program_counter;
                 }
-            },
-            | OPCODE_CONCAT => {
+            }
+            OPCODE_CONCAT => {
                 let top: *mut TValue = (*state).interpreter_top.stkidrel_pointer.sub(1);
                 let a: i32 = (inst >> POSITION_A & MASK_A) as i32;
                 let total: i32 = top.sub(1).offset_from(base.add(a as usize)) as i32;
@@ -3890,18 +4271,18 @@ pub unsafe fn luav_finishop(state: *mut State) {
                 (*io1).copy_from(&(*io2));
                 (*state).interpreter_top.stkidrel_pointer = top.sub(1);
                 concatenate(state, total);
-            },
-            | OPCODE_CLOSE => {
+            }
+            OPCODE_CLOSE => {
                 (*callinfo).callinfo_u.l.saved_program_counter = ((*callinfo).callinfo_u.l.saved_program_counter).sub(1);
                 (*callinfo).callinfo_u.l.saved_program_counter;
-            },
-            | OPCODE_RETURN => {
+            }
+            OPCODE_RETURN => {
                 let ra: *mut TValue = base.add((inst >> POSITION_A & MASK_A) as usize);
                 (*state).interpreter_top.stkidrel_pointer = ra.add((*callinfo).callinfo_u2.callinfoconstituentb_nres as usize);
                 (*callinfo).callinfo_u.l.saved_program_counter = ((*callinfo).callinfo_u.l.saved_program_counter).sub(1);
                 (*callinfo).callinfo_u.l.saved_program_counter;
-            },
-            | _ => {},
+            }
+            _ => {}
         };
     }
 }
@@ -3921,7 +4302,9 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
         '_startfunc: loop {
             trap = (*state).interpreter_hook_mask;
             '_returning: loop {
-                closure = (*(*callinfo).callinfo_function.stkidrel_pointer).as_closure().unwrap();
+                closure = (*(*callinfo).callinfo_function.stkidrel_pointer)
+                    .as_closure()
+                    .unwrap();
                 k = (*(*closure).closure_payload.closurepayload_lprototype)
                     .prototype_constants
                     .vectort_pointer;
@@ -3939,36 +4322,36 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                     program_counter = program_counter.add(1);
                     i = *current_pc;
                     match i & MASK_OP {
-                        | OPCODE_MOVE => {
+                        OPCODE_MOVE => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let io1: *mut TValue = &mut (*ra);
                             let io2: *const TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             (*io1).copy_from(&*io2);
                             continue;
-                        },
-                        | OPCODE_LOADI => {
+                        }
+                        OPCODE_LOADI => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let b: i64 = ((i >> POSITION_K & MASK_BX) as i32 - (OFFSET_SBX)) as i64;
                             let io: *mut TValue = &mut (*ra);
                             (*io).set_integer(b);
                             continue;
-                        },
-                        | OPCODE_LOADF => {
+                        }
+                        OPCODE_LOADF => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let b: i32 = (i >> POSITION_K & MASK_BX) as i32 - (OFFSET_SBX);
                             let io: *mut TValue = &mut (*ra);
                             (*io).set_number(b as f64);
                             continue;
-                        },
-                        | OPCODE_LOADK => {
+                        }
+                        OPCODE_LOADK => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let rb: *mut TValue = k.add((i >> POSITION_K & MASK_BX) as usize);
                             let io1: *mut TValue = &mut (*ra);
                             let io2: *const TValue = rb;
                             (*io1).copy_from(&(*io2));
                             continue;
-                        },
-                        | OPCODE_LOADKX => {
+                        }
+                        OPCODE_LOADKX => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let rb: *mut TValue = k.add((*program_counter >> POSITION_A & MASK_AX) as usize);
                             program_counter = program_counter.add(1);
@@ -3976,24 +4359,24 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                             let io2: *const TValue = rb;
                             (*io1).copy_from(&(*io2));
                             continue;
-                        },
-                        | OPCODE_LOAD_FALSE => {
+                        }
+                        OPCODE_LOAD_FALSE => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             (*ra).tvalue_set_tag_variant(TagVariant::BooleanFalse);
                             continue;
-                        },
-                        | OPCODE_LFALSESKIP => {
+                        }
+                        OPCODE_LFALSESKIP => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             (*ra).tvalue_set_tag_variant(TagVariant::BooleanFalse);
                             program_counter = program_counter.add(1);
                             continue;
-                        },
-                        | OPCODE_LOAD_TRUE => {
+                        }
+                        OPCODE_LOAD_TRUE => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             (*ra).tvalue_set_tag_variant(TagVariant::BooleanTrue);
                             continue;
-                        },
-                        | OPCODE_LOADNIL => {
+                        }
+                        OPCODE_LOADNIL => {
                             let mut ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let mut b: i32 = (i >> POSITION_B & MASK_A) as i32;
                             loop {
@@ -4007,8 +4390,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 }
                             }
                             continue;
-                        },
-                        | OPCODE_GET_UPVALUE => {
+                        }
+                        OPCODE_GET_UPVALUE => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let b: i32 = (i >> POSITION_B & MASK_A) as i32;
                             let io1: *mut TValue = &mut (*ra);
@@ -4020,8 +4403,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                             .upvaluea_p;
                             (*io1).copy_from(&(*io2));
                             continue;
-                        },
-                        | OPCODE_SETUPVAL => {
+                        }
+                        OPCODE_SETUPVAL => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let uv: *mut UpValue = *((*closure).closure_upvalues)
                                 .closureupvalue_lvalues
@@ -4037,8 +4420,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 Object::luac_barrier_(state, &mut *(uv as *mut Object), (*ra).as_object().unwrap());
                             }
                             continue;
-                        },
-                        | OPCODE_GET_TABLE_UPVALUE => {
+                        }
+                        OPCODE_GET_TABLE_UPVALUE => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let count_upvalues: *mut TValue = (**((*closure).closure_upvalues)
                                 .closureupvalue_lvalues
@@ -4067,8 +4450,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_GET_TABLE => {
+                        }
+                        OPCODE_GET_TABLE => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let rb: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let rc: *mut TValue = &mut (*base.add((i >> POSITION_C & MASK_A) as usize));
@@ -4092,8 +4475,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_INDEX_INTEGER => {
+                        }
+                        OPCODE_INDEX_INTEGER => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let rb: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let c: i32 = (i >> POSITION_C & MASK_A) as i32;
@@ -4112,8 +4495,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_GET_FIELD => {
+                        }
+                        OPCODE_GET_FIELD => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let rb: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let rc: *mut TValue = k.add((i >> POSITION_C & MASK_A) as usize);
@@ -4137,8 +4520,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_SETTABUP => {
+                        }
+                        OPCODE_SETTABUP => {
                             let hres: i32;
                             let upval: *mut TValue = (**((*closure).closure_upvalues)
                                 .closureupvalue_lvalues
@@ -4179,8 +4562,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_SETTABLE => {
+                        }
+                        OPCODE_SETTABLE => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let hres: i32;
                             let rb: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
@@ -4231,8 +4614,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_SETI => {
+                        }
+                        OPCODE_SETI => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let hres: i32;
                             let b: i32 = (i >> POSITION_B & MASK_A) as i32;
@@ -4280,8 +4663,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_SETFIELD => {
+                        }
+                        OPCODE_SETFIELD => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let hres: i32;
                             let rb: *mut TValue = k.add((i >> POSITION_B & MASK_A) as usize);
@@ -4314,8 +4697,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_NEWTABLE => {
+                        }
+                        OPCODE_NEWTABLE => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let mut new_table_size = (i >> POSITION_B & MASK_A) as usize;
                             let mut new_array_size: usize = (i >> POSITION_C & MASK_A) as usize;
@@ -4341,8 +4724,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_SELF => {
+                        }
+                        OPCODE_SELF => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let rb: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let rc: *mut TValue = k.add((i >> POSITION_C & MASK_A) as usize);
@@ -4369,8 +4752,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_ADDI => {
+                        }
+                        OPCODE_ADDI => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let imm: i32 = (i >> POSITION_C & MASK_A) as i32 - (((1 << 8) - 1) >> 1);
@@ -4387,8 +4770,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*io).set_number(nb + fimm);
                             }
                             continue;
-                        },
-                        | OPCODE_ADDK => {
+                        }
+                        OPCODE_ADDK => {
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = k.add((i >> POSITION_C & MASK_A) as usize);
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
@@ -4432,8 +4815,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 }
                             }
                             continue;
-                        },
-                        | OPCODE_SUBK => {
+                        }
+                        OPCODE_SUBK => {
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = k.add((i >> POSITION_C & MASK_A) as usize);
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
@@ -4477,8 +4860,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 }
                             }
                             continue;
-                        },
-                        | OPCODE_MULK => {
+                        }
+                        OPCODE_MULK => {
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = k.add((i >> POSITION_C & MASK_A) as usize);
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
@@ -4522,8 +4905,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 }
                             }
                             continue;
-                        },
-                        | OPCODE_MODK => {
+                        }
+                        OPCODE_MODK => {
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*state).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
@@ -4569,8 +4952,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 }
                             }
                             continue;
-                        },
-                        | OPCODE_POWK => {
+                        }
+                        OPCODE_POWK => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = k.add((i >> POSITION_C & MASK_A) as usize);
@@ -4604,8 +4987,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*io).set_number(if n2 == 2.0 { n1 * n1 } else { n1.powf(n2) });
                             }
                             continue;
-                        },
-                        | OPCODE_DIVK => {
+                        }
+                        OPCODE_DIVK => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = k.add((i >> POSITION_C & MASK_A) as usize);
@@ -4639,8 +5022,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*io).set_number(n1 / n2);
                             }
                             continue;
-                        },
-                        | OPCODE_IDIVK => {
+                        }
+                        OPCODE_IDIVK => {
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*state).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
@@ -4686,8 +5069,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 }
                             }
                             continue;
-                        },
-                        | OPCODE_BANDK => {
+                        }
+                        OPCODE_BANDK => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = k.add((i >> POSITION_C & MASK_A) as usize);
@@ -4705,8 +5088,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*io).set_integer((i1 as usize & i2 as usize) as i64);
                             }
                             continue;
-                        },
-                        | OPCODE_BORK => {
+                        }
+                        OPCODE_BORK => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = k.add((i >> POSITION_C & MASK_A) as usize);
@@ -4724,8 +5107,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*io).set_integer((i1 as usize | i2 as usize) as i64);
                             }
                             continue;
-                        },
-                        | OPCODE_BXORK => {
+                        }
+                        OPCODE_BXORK => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = k.add((i >> POSITION_C & MASK_A) as usize);
@@ -4743,8 +5126,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*io).set_integer((i1 as usize ^ i2 as usize) as i64);
                             }
                             continue;
-                        },
-                        | OPCODE_SHRI => {
+                        }
+                        OPCODE_SHRI => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let rb: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let ic: i32 = (i >> POSITION_C & MASK_A) as i32 - (((1 << 8) - 1) >> 1);
@@ -4761,8 +5144,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*io).set_integer(luav_shiftl(ib, -ic as i64));
                             }
                             continue;
-                        },
-                        | OPCODE_SHLI => {
+                        }
+                        OPCODE_SHLI => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let rb: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let ic: i32 = (i >> POSITION_C & MASK_A) as i32 - (((1 << 8) - 1) >> 1);
@@ -4779,8 +5162,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*io).set_integer(luav_shiftl(ic as i64, ib));
                             }
                             continue;
-                        },
-                        | OPCODE_ADD => {
+                        }
+                        OPCODE_ADD => {
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = &mut (*base.add((i >> POSITION_C & MASK_A) as usize));
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
@@ -4824,8 +5207,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 }
                             }
                             continue;
-                        },
-                        | OPCODE_SUB => {
+                        }
+                        OPCODE_SUB => {
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = &mut (*base.add((i >> POSITION_C & MASK_A) as usize));
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
@@ -4869,8 +5252,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 }
                             }
                             continue;
-                        },
-                        | OPCODE_MUL => {
+                        }
+                        OPCODE_MUL => {
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = &mut (*base.add((i >> POSITION_C & MASK_A) as usize));
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
@@ -4914,8 +5297,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 }
                             }
                             continue;
-                        },
-                        | OPCODE_MOD => {
+                        }
+                        OPCODE_MOD => {
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*state).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
@@ -4961,8 +5344,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 }
                             }
                             continue;
-                        },
-                        | OPCODE_POW => {
+                        }
+                        OPCODE_POW => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = &mut (*base.add((i >> POSITION_C & MASK_A) as usize));
@@ -4996,8 +5379,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*io).set_number(if n2 == 2.0 { n1 * n1 } else { n1.powf(n2) });
                             }
                             continue;
-                        },
-                        | OPCODE_DIV => {
+                        }
+                        OPCODE_DIV => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = &mut (*base.add((i >> POSITION_C & MASK_A) as usize));
@@ -5031,8 +5414,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*io).set_number(n1 / n2);
                             }
                             continue;
-                        },
-                        | OPCODE_IDIV => {
+                        }
+                        OPCODE_IDIV => {
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*state).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
@@ -5078,8 +5461,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 }
                             }
                             continue;
-                        },
-                        | OPCODE_BAND => {
+                        }
+                        OPCODE_BAND => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = &mut (*base.add((i >> POSITION_C & MASK_A) as usize));
@@ -5103,8 +5486,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*io).set_integer((i1 as usize & i2 as usize) as i64);
                             }
                             continue;
-                        },
-                        | OPCODE_BOR => {
+                        }
+                        OPCODE_BOR => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = &mut (*base.add((i >> POSITION_C & MASK_A) as usize));
@@ -5128,8 +5511,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*io).set_integer((i1 as usize | i2 as usize) as i64);
                             }
                             continue;
-                        },
-                        | OPCODE_BXOR => {
+                        }
+                        OPCODE_BXOR => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = &mut (*base.add((i >> POSITION_C & MASK_A) as usize));
@@ -5153,8 +5536,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*io).set_integer((i1 as usize ^ i2 as usize) as i64);
                             }
                             continue;
-                        },
-                        | OPCODE_SHR => {
+                        }
+                        OPCODE_SHR => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = &mut (*base.add((i >> POSITION_C & MASK_A) as usize));
@@ -5177,8 +5560,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*ra).set_integer(luav_shiftl(i1, (0usize).wrapping_sub(i2 as usize) as i64));
                             }
                             continue;
-                        },
-                        | OPCODE_SHL => {
+                        }
+                        OPCODE_SHL => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let v1: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let v2: *mut TValue = &mut (*base.add((i >> POSITION_C & MASK_A) as usize));
@@ -5202,8 +5585,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*io).set_integer(luav_shiftl(i1, i2));
                             }
                             continue;
-                        },
-                        | OPCODE_MMBIN => {
+                        }
+                        OPCODE_MMBIN => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let pi: u32 = *program_counter.sub(2);
                             let rb: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
@@ -5214,8 +5597,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                             luat_trybintm(state, &(*ra), rb, result, tm);
                             trap = (*callinfo).callinfo_u.l.trap;
                             continue;
-                        },
-                        | OPCODE_MMBINI => {
+                        }
+                        OPCODE_MMBINI => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let pi: u32 = *program_counter.sub(2);
                             let imm: i32 = (i >> POSITION_B & MASK_A) as i32 - (((1 << 8) - 1) >> 1);
@@ -5227,8 +5610,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                             luat_trybinitm(state, &(*ra), imm as i64, flip, result, tm);
                             trap = (*callinfo).callinfo_u.l.trap;
                             continue;
-                        },
-                        | OPCODE_MMBINK => {
+                        }
+                        OPCODE_MMBINK => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let pi: u32 = *program_counter.sub(2);
                             let imm: *mut TValue = k.add((i >> POSITION_B & MASK_A) as usize);
@@ -5240,8 +5623,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                             luat_trybinassoctm(state, &(*ra), imm, flip, result, tm);
                             trap = (*callinfo).callinfo_u.l.trap;
                             continue;
-                        },
-                        | OPCODE_UNM => {
+                        }
+                        OPCODE_UNM => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let rb: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let mut nb: f64 = 0.0;
@@ -5268,8 +5651,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_BNOT => {
+                        }
+                        OPCODE_BNOT => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let rb: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             let mut ib: i64 = 0;
@@ -5289,8 +5672,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_NOT => {
+                        }
+                        OPCODE_NOT => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let rb: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             if (*rb).get_tagvariant() == TagVariant::BooleanFalse || (*rb).get_tagvariant().to_tag_type().is_nil() {
@@ -5299,16 +5682,16 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*ra).tvalue_set_tag_variant(TagVariant::BooleanFalse);
                             }
                             continue;
-                        },
-                        | OPCODE_LEN => {
+                        }
+                        OPCODE_LEN => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*state).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             luav_objlen(state, ra, &(*base.add((i >> POSITION_B & MASK_A) as usize)));
                             trap = (*callinfo).callinfo_u.l.trap;
                             continue;
-                        },
-                        | OPCODE_CONCAT => {
+                        }
+                        OPCODE_CONCAT => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let n: i32 = (i >> POSITION_B & MASK_A) as i32;
                             (*state).interpreter_top.stkidrel_pointer = ra.add(n as usize);
@@ -5322,34 +5705,38 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_CLOSE => {
+                        }
+                        OPCODE_CLOSE => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*state).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             luaf_close(state, ra, Status::OK, 1);
                             trap = (*callinfo).callinfo_u.l.trap;
                             continue;
-                        },
-                        | OPCODE_TBC => {
+                        }
+                        OPCODE_TBC => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*state).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             luaf_newtbcupval(state, ra);
                             continue;
-                        },
-                        | OPCODE_JMP => {
+                        }
+                        OPCODE_JMP => {
                             program_counter = program_counter.offset(((i >> POSITION_A & MASK_AX) as i32 - (OFFSET_SJ)) as isize);
                             trap = (*callinfo).callinfo_u.l.trap;
                             continue;
-                        },
-                        | OPCODE_EQ => {
+                        }
+                        OPCODE_EQ => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
 
                             let rb: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*state).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
-                            let cond: i32 = if luav_equalobj(state, &(*ra), rb) { 1 } else { 0 };
+                            let cond: i32 = if luav_equalobj(state, &(*ra), rb) {
+                                1
+                            } else {
+                                0
+                            };
                             trap = (*callinfo).callinfo_u.l.trap;
                             if cond != (i >> POSITION_K & MASK_K) as i32 {
                                 program_counter = program_counter.add(1);
@@ -5360,8 +5747,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_LT => {
+                        }
+                        OPCODE_LT => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let cond: i32;
                             let rb: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
@@ -5390,8 +5777,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_LE => {
+                        }
+                        OPCODE_LE => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let cond: i32;
                             let rb: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
@@ -5408,7 +5795,11 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                             } else {
                                 (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                                 (*state).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
-                                cond = if lessequalothers(state, &(*ra), rb) { 1 } else { 0 };
+                                cond = if lessequalothers(state, &(*ra), rb) {
+                                    1
+                                } else {
+                                    0
+                                };
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             if cond != (i >> POSITION_K & MASK_K) as i32 {
@@ -5420,11 +5811,15 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_EQK => {
+                        }
+                        OPCODE_EQK => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let rb: *mut TValue = k.add((i >> POSITION_B & MASK_A) as usize);
-                            let cond: i32 = if luav_equalobj(null_mut(), &(*ra), rb) { 1 } else { 0 };
+                            let cond: i32 = if luav_equalobj(null_mut(), &(*ra), rb) {
+                                1
+                            } else {
+                                0
+                            };
                             if cond != (i >> POSITION_K & MASK_K) as i32 {
                                 program_counter = program_counter.add(1);
                             } else {
@@ -5434,8 +5829,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_EQI => {
+                        }
+                        OPCODE_EQI => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let cond: i32;
                             let im: i32 = (i >> POSITION_B & MASK_A) as i32 - (((1 << 8) - 1) >> 1);
@@ -5455,8 +5850,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_LTI => {
+                        }
+                        OPCODE_LTI => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let cond: i32;
                             let im: i32 = (i >> POSITION_B & MASK_A) as i32 - (((1 << 8) - 1) >> 1);
@@ -5482,8 +5877,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_LEI => {
+                        }
+                        OPCODE_LEI => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let cond: i32;
                             let im: i32 = (i >> POSITION_B & MASK_A) as i32 - (((1 << 8) - 1) >> 1);
@@ -5509,8 +5904,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_GTI => {
+                        }
+                        OPCODE_GTI => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let cond: i32;
                             let im: i32 = (i >> POSITION_B & MASK_A) as i32 - (((1 << 8) - 1) >> 1);
@@ -5536,8 +5931,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_GEI => {
+                        }
+                        OPCODE_GEI => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let cond: i32;
                             let im: i32 = (i >> POSITION_B & MASK_A) as i32 - (((1 << 8) - 1) >> 1);
@@ -5563,8 +5958,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_TEST => {
+                        }
+                        OPCODE_TEST => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let cond: i32 = !((*ra).get_tagvariant() == TagVariant::BooleanFalse
                                 || (*ra).get_tagvariant().to_tag_type().is_nil())
@@ -5578,8 +5973,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_TESTSET => {
+                        }
+                        OPCODE_TESTSET => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let rb: *mut TValue = &mut (*base.add((i >> POSITION_B & MASK_A) as usize));
                             if ((*rb).get_tagvariant() == TagVariant::BooleanFalse || (*rb).get_tagvariant().to_tag_type().is_nil())
@@ -5597,8 +5992,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_CALL => {
+                        }
+                        OPCODE_CALL => {
                             ra_call = base.add((i >> POSITION_A & MASK_A) as usize);
                             b_call = (i >> POSITION_B & MASK_A) as i32;
                             count_results = (i >> POSITION_C & MASK_A) as i32 - 1;
@@ -5612,8 +6007,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                             }
                             trap = (*callinfo).callinfo_u.l.trap;
                             continue;
-                        },
-                        | OPCODE_TAILCALL => {
+                        }
+                        OPCODE_TAILCALL => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let mut b: i32 = (i >> POSITION_B & MASK_A) as i32;
 
@@ -5641,8 +6036,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                             luad_poscall(state, callinfo, n);
                             trap = (*callinfo).callinfo_u.l.trap;
                             break;
-                        },
-                        | OPCODE_RETURN => {
+                        }
+                        OPCODE_RETURN => {
                             let mut ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let mut n: i32 = (i >> POSITION_B & MASK_A) as i32 - 1;
                             let nparams1_0: i32 = (i >> POSITION_C & MASK_A) as i32;
@@ -5670,8 +6065,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                             luad_poscall(state, callinfo, n);
                             trap = (*callinfo).callinfo_u.l.trap;
                             break;
-                        },
-                        | OPCODE_RETURN0 => {
+                        }
+                        OPCODE_RETURN0 => {
                             if (*state).interpreter_hook_mask != 0 {
                                 let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                                 (*state).interpreter_top.stkidrel_pointer = ra;
@@ -5691,8 +6086,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 }
                             }
                             break;
-                        },
-                        | OPCODE_RETURN1 => {
+                        }
+                        OPCODE_RETURN1 => {
                             if (*state).interpreter_hook_mask != 0 {
                                 let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                                 (*state).interpreter_top.stkidrel_pointer = ra.add(1);
@@ -5720,8 +6115,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 }
                             }
                             break;
-                        },
-                        | OPCODE_FORLOOP => {
+                        }
+                        OPCODE_FORLOOP => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             if (*ra.add(2)).get_tagvariant() == TagVariant::NumericInteger {
                                 let count: usize = (*ra.add(1)).as_integer().unwrap() as usize;
@@ -5742,8 +6137,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                             }
                             trap = (*callinfo).callinfo_u.l.trap;
                             continue;
-                        },
-                        | OPCODE_FORPREP => {
+                        }
+                        OPCODE_FORPREP => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*state).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
@@ -5751,8 +6146,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 program_counter = program_counter.add(((i >> POSITION_K & MASK_BX) as i32 + 1) as usize);
                             }
                             continue;
-                        },
-                        | OPCODE_TFORPREP => {
+                        }
+                        OPCODE_TFORPREP => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             // Swap control (ra+2) and closing (ra+3) variables
                             let mut temp_tfor: TValue = core::mem::zeroed();
@@ -5767,14 +6162,14 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                             program_counter = program_counter.add(1);
                             i = *current_pc;
                             tfor_action = TFOR_CALL;
-                        },
-                        | OPCODE_TFORCALL => {
+                        }
+                        OPCODE_TFORCALL => {
                             tfor_action = TFOR_CALL;
-                        },
-                        | OPCODE_TFORLOOP => {
+                        }
+                        OPCODE_TFORLOOP => {
                             tfor_action = TFOR_LOOP;
-                        },
-                        | OPCODE_SETLIST => {
+                        }
+                        OPCODE_SETLIST => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let mut n: i32 = (i >> POSITION_B & MASK_A) as i32;
                             let mut last: u32 = i >> POSITION_C & MASK_A;
@@ -5806,8 +6201,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 n -= 1;
                             }
                             continue;
-                        },
-                        | OPCODE_CLOSURE => {
+                        }
+                        OPCODE_CLOSURE => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let p: *mut Prototype = *((*(*closure).closure_payload.closurepayload_lprototype)
                                 .prototype_prototypes
@@ -5818,7 +6213,9 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                             pushclosure(
                                 state,
                                 p,
-                                ((*closure).closure_upvalues).closureupvalue_lvalues.as_mut_ptr(),
+                                ((*closure).closure_upvalues)
+                                    .closureupvalue_lvalues
+                                    .as_mut_ptr(),
                                 base,
                                 ra,
                             );
@@ -5829,8 +6226,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
-                        },
-                        | OPCODE_VARARG => {
+                        }
+                        OPCODE_VARARG => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             let n: i32 = (i >> POSITION_C & MASK_A) as i32 - 1;
                             let vatab: i32 = if (i & 1_u32 << POSITION_K) as i32 != 0 {
@@ -5843,8 +6240,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                             luat_getvarargs(state, callinfo, ra, n, vatab);
                             trap = (*callinfo).callinfo_u.l.trap;
                             continue;
-                        },
-                        | OPCODE_GETVARG => {
+                        }
+                        OPCODE_GETVARG => {
                             // OP_GETVARG: A B C — R[A] := vararg[R[C]]
                             // Used when varargs are hidden (not in a table)
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
@@ -5888,8 +6285,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                 (*ra).tvalue_set_tag_variant(TagVariant::NilNil);
                             }
                             continue;
-                        },
-                        | OPCODE_ERRNNIL => {
+                        }
+                        OPCODE_ERRNNIL => {
                             // OP_ERRNNIL: A Bx — raise error if R[A] is not nil
                             let ra_errnnil: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             if (*ra_errnnil).get_tagvariant() != TagVariant::NilNil {
@@ -5901,11 +6298,15 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                     c"?".as_ptr()
                                 };
                                 (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
-                                luag_runerror(state, c"global '%s' already defined".as_ptr(), &[name.into()]);
+                                luag_runerror(
+                                    state,
+                                    c"global '%s' already defined".as_ptr(),
+                                    &[name.into()],
+                                );
                             }
                             continue;
-                        },
-                        | OPCODE_VARARGPREP => {
+                        }
+                        OPCODE_VARARGPREP => {
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             luat_adjustvarargs(
                                 state,
@@ -5920,13 +6321,13 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                             }
                             base = ((*callinfo).callinfo_function.stkidrel_pointer).add(1);
                             continue;
-                        },
-                        | OPCODE_EXTRAARG | _ => {
+                        }
+                        OPCODE_EXTRAARG | _ => {
                             continue;
-                        },
+                        }
                     }
                     match tfor_action {
-                        | TFOR_CALL => {
+                        TFOR_CALL => {
                             let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                             // Copy control, state, function to ra+3..ra+5
                             (*ra.add(5)).copy_from(&*ra.add(3)); // control -> ra+5
@@ -5942,8 +6343,8 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                             let current_pc = program_counter;
                             program_counter = program_counter.add(1);
                             i = *current_pc;
-                        },
-                        | _ => {},
+                        }
+                        _ => {}
                     }
                     let ra: *mut TValue = base.add((i >> POSITION_A & MASK_A) as usize);
                     if !(*ra.add(3)).get_tagvariant().to_tag_type().is_nil() {
@@ -6011,19 +6412,29 @@ pub unsafe fn pushfuncname(state: *mut State, debuginfo: *mut DebugInfo) {
             lua_pushfstring(
                 state,
                 c"%s '%s'".as_ptr(),
-                &[(*debuginfo).debuginfo_name_what.into(), (*debuginfo).debuginfo_name.into()],
+                &[
+                    (*debuginfo).debuginfo_name_what.into(),
+                    (*debuginfo).debuginfo_name.into(),
+                ],
             );
         } else if *(*debuginfo).debuginfo_what as i32 == Character::LowerM as i32 {
             lua_pushstring(state, c"main chunk".as_ptr());
         } else if pushglobalfuncname(state, debuginfo) {
-            lua_pushfstring(state, c"function '%s'".as_ptr(), &[lua_tolstring(state, -1, null_mut()).into()]);
+            lua_pushfstring(
+                state,
+                c"function '%s'".as_ptr(),
+                &[lua_tolstring(state, -1, null_mut()).into()],
+            );
             lua_rotate(state, -2, -1);
             lua_settop(state, -2);
         } else if *(*debuginfo).debuginfo_what as i32 != Character::UpperC as i32 {
             lua_pushfstring(
                 state,
                 c"function <%s:%d>".as_ptr(),
-                &[((*debuginfo).debuginfo_short_source).as_mut_ptr().into(), (*debuginfo).debuginfo_line_defined.into()],
+                &[
+                    ((*debuginfo).debuginfo_short_source).as_mut_ptr().into(),
+                    (*debuginfo).debuginfo_line_defined.into(),
+                ],
             );
         } else {
             lua_pushstring(state, c"?".as_ptr());
@@ -6057,13 +6468,18 @@ pub unsafe fn lual_traceback(state: *mut State, other_state: *mut State, message
         let mut b = Buffer::new();
         let mut debuginfo: DebugInfo = DebugInfo::new();
         let last: i32 = lastlevel(other_state);
-        let mut limit2show: i32 = if last - level > LEVELS1 + LEVELS2 { LEVELS1 } else { -1 };
+        let mut limit2show: i32 = if last - level > LEVELS1 + LEVELS2 {
+            LEVELS1
+        } else {
+            -1
+        };
         b.initialize(state);
         if !message.is_null() {
             b.add_string(message);
             (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
             let write_offset = b.buffer_loads.get_length();
-            b.buffer_loads.set_length((b.buffer_loads.get_length() + 1) as usize);
+            b.buffer_loads
+                .set_length((b.buffer_loads.get_length() + 1) as usize);
             *(b.buffer_loads.loads_pointer).add(write_offset as usize) = Character::LineFeed as i8;
         }
         b.add_string(c"stack traceback:".as_ptr());
@@ -6077,18 +6493,29 @@ pub unsafe fn lual_traceback(state: *mut State, other_state: *mut State, message
             limit2show -= 1;
             if prev_limit == 0 {
                 let n: i32 = last - level - LEVELS2 + 1;
-                lua_pushfstring(state, c"\n\t...\t(skipping %d levels)".as_ptr(), &[n.into()]);
+                lua_pushfstring(
+                    state,
+                    c"\n\t...\t(skipping %d levels)".as_ptr(),
+                    &[n.into()],
+                );
                 b.add_value();
                 level += n;
             } else {
                 lua_getinfo(other_state, c"Slnt".as_ptr(), &mut debuginfo);
                 if debuginfo.debuginfo_current_line <= 0 {
-                    lua_pushfstring(state, c"\n\t%s: in ".as_ptr(), &[(debuginfo.debuginfo_short_source).as_mut_ptr().into()]);
+                    lua_pushfstring(
+                        state,
+                        c"\n\t%s: in ".as_ptr(),
+                        &[(debuginfo.debuginfo_short_source).as_mut_ptr().into()],
+                    );
                 } else {
                     lua_pushfstring(
                         state,
                         c"\n\t%s:%d: in ".as_ptr(),
-                        &[(debuginfo.debuginfo_short_source).as_mut_ptr().into(), debuginfo.debuginfo_current_line.into()],
+                        &[
+                            (debuginfo.debuginfo_short_source).as_mut_ptr().into(),
+                            debuginfo.debuginfo_current_line.into(),
+                        ],
                     );
                 }
                 b.add_value();
@@ -6106,7 +6533,11 @@ pub unsafe fn lual_argerror(state: *mut State, mut arg: i32, extramsg: *const i8
     unsafe {
         let mut debuginfo: DebugInfo = DebugInfo::new();
         if lua_getstack(state, 0, &mut debuginfo) == 0 {
-            return lual_error(state, c"bad argument #%d (%s)".as_ptr(), &[arg.into(), extramsg.into()]);
+            return lual_error(
+                state,
+                c"bad argument #%d (%s)".as_ptr(),
+                &[arg.into(), extramsg.into()],
+            );
         }
         lua_getinfo(state, c"n".as_ptr(), &mut debuginfo);
         if std::ffi::CStr::from_ptr(debuginfo.debuginfo_name_what) == c"method" {
@@ -6143,7 +6574,11 @@ pub unsafe fn lual_typeerror(state: *mut State, arg: i32, tname: *const i8) -> i
         } else {
             typearg = lua_typename(state, lua_type(state, arg));
         }
-        let message: *const i8 = lua_pushfstring(state, c"%s expected, got %s".as_ptr(), &[tname.into(), typearg.into()]);
+        let message: *const i8 = lua_pushfstring(
+            state,
+            c"%s expected, got %s".as_ptr(),
+            &[tname.into(), typearg.into()],
+        );
         lual_argerror(state, arg, message)
     }
 }
@@ -6161,7 +6596,10 @@ pub unsafe fn lual_where(state: *mut State, level: i32) {
                 lua_pushfstring(
                     state,
                     c"%s:%d: ".as_ptr(),
-                    &[(debuginfo.debuginfo_short_source).as_mut_ptr().into(), debuginfo.debuginfo_current_line.into()],
+                    &[
+                        (debuginfo.debuginfo_short_source).as_mut_ptr().into(),
+                        debuginfo.debuginfo_current_line.into(),
+                    ],
                 );
                 return;
             }
@@ -6185,7 +6623,11 @@ pub unsafe fn lual_fileresult(state: *mut State, stat: i32, fname: *const i8) ->
             1
         } else {
             (*state).push_nil();
-            let message: *const i8 = if en != 0 { os_strerror(en) } else { c"(no extra info)".as_ptr() };
+            let message: *const i8 = if en != 0 {
+                os_strerror(en)
+            } else {
+                c"(no extra info)".as_ptr()
+            };
             if !fname.is_null() {
                 lua_pushfstring(state, c"%s: %s".as_ptr(), &[fname.into(), message.into()]);
             } else {
@@ -6278,7 +6720,11 @@ pub unsafe fn lual_checkoption(state: *mut State, arg: i32, def: *const i8, lst:
             }
             i += 1;
         }
-        lual_argerror(state, arg, lua_pushfstring(state, c"invalid option '%s'".as_ptr(), &[name.into()]))
+        lual_argerror(
+            state,
+            arg,
+            lua_pushfstring(state, c"invalid option '%s'".as_ptr(), &[name.into()]),
+        )
     }
 }
 pub unsafe fn lual_checkstack(state: *mut State, space: i32, message: *const i8) {
@@ -6311,13 +6757,17 @@ pub unsafe fn lual_checklstring(state: *mut State, arg: i32, length: *mut usize)
 pub unsafe fn lual_optlstring(state: *mut State, arg: i32, def: *const i8, length: *mut usize) -> *const i8 {
     unsafe {
         match lua_type(state, arg) {
-            | None | Some(TagType::Nil) => {
+            None | Some(TagType::Nil) => {
                 if !length.is_null() {
-                    *length = if !def.is_null() { cstr_len(def) } else { 0usize };
+                    *length = if !def.is_null() {
+                        cstr_len(def)
+                    } else {
+                        0usize
+                    };
                 }
                 def
-            },
-            | _ => lual_checklstring(state, arg, length),
+            }
+            _ => lual_checklstring(state, arg, length),
         }
     }
 }
@@ -6334,8 +6784,8 @@ pub unsafe fn lual_checknumber(state: *mut State, arg: i32) -> f64 {
 pub unsafe fn lual_optnumber(state: *mut State, arg: i32, def: f64) -> f64 {
     unsafe {
         match lua_type(state, arg) {
-            | None | Some(TagType::Nil) => def,
-            | _ => lual_checknumber(state, arg),
+            None | Some(TagType::Nil) => def,
+            _ => lual_checknumber(state, arg),
         }
     }
 }
@@ -6361,8 +6811,8 @@ pub unsafe fn lual_checkinteger(state: *mut State, arg: i32) -> i64 {
 pub unsafe fn lual_optinteger(state: *mut State, arg: i32, def: i64) -> i64 {
     unsafe {
         match lua_type(state, arg) {
-            | None | Some(TagType::Nil) => def,
-            | _ => lual_checkinteger(state, arg),
+            None | Some(TagType::Nil) => def,
+            _ => lual_checkinteger(state, arg),
         }
     }
 }
@@ -6374,18 +6824,18 @@ pub unsafe fn get_f(mut _state: *mut State, arbitrary_data: *mut std::ffi::c_voi
             (*lf).loadf_n = 0;
         } else {
             match (*lf).loadf_source.as_mut() {
-                | None => return null(),
-                | Some(source) => {
+                None => return null(),
+                Some(source) => {
                     let buf = std::slice::from_raw_parts_mut((*lf).loadf_buffer.as_mut_ptr() as *mut u8, LUAL_BUFFERSIZE);
                     match source.read_chunk(buf) {
-                        | Ok(0) => return null(),
-                        | Ok(n) => *size = n,
-                        | Err(_) => {
+                        Ok(0) => return null(),
+                        Ok(n) => *size = n,
+                        Err(_) => {
                             (*lf).loadf_had_error = true;
                             return null();
-                        },
+                        }
                     }
-                },
+                }
             }
         }
         ((*lf).loadf_buffer).as_mut_ptr()
@@ -6396,9 +6846,17 @@ pub unsafe fn errfile(state: *mut State, what: *const i8, fnameindex: i32) -> St
         let err: i32 = get_errno();
         let filename: *const i8 = (lua_tolstring(state, fnameindex, null_mut())).add(1);
         if err != 0 {
-            lua_pushfstring(state, c"cannot %s %s: %s".as_ptr(), &[what.into(), filename.into(), os_strerror(err).into()]);
+            lua_pushfstring(
+                state,
+                c"cannot %s %s: %s".as_ptr(),
+                &[what.into(), filename.into(), os_strerror(err).into()],
+            );
         } else {
-            lua_pushfstring(state, c"cannot %s %s".as_ptr(), &[what.into(), filename.into()]);
+            lua_pushfstring(
+                state,
+                c"cannot %s %s".as_ptr(),
+                &[what.into(), filename.into()],
+            );
         }
         lua_rotate(state, fnameindex, -1);
         lua_settop(state, -2);
@@ -6407,14 +6865,14 @@ pub unsafe fn errfile(state: *mut State, what: *const i8, fnameindex: i32) -> St
 }
 fn skip_bom(source: &mut LoadSource) -> i32 {
     match source.read_byte() {
-        | None => -1,
-        | Some(c) => {
+        None => -1,
+        Some(c) => {
             if c == 0xef && source.read_byte() == Some(0xbb) && source.read_byte() == Some(0xbf) {
                 source.read_byte().map_or(-1, |b| b as i32)
             } else {
                 c as i32
             }
-        },
+        }
     }
 }
 fn skipcomment(source: &mut LoadSource, pointer: *mut i32) -> i32 {
@@ -6440,8 +6898,8 @@ thread_local! {
 }
 fn set_embedded_base_dir(path: &str) {
     let base = match path.rfind('/') {
-        | Some(pos) => &path[..pos + 1],
-        | None => "",
+        Some(pos) => &path[..pos + 1],
+        None => "",
     };
     EMBEDDED_BASE_DIR.with(|d| *d.borrow_mut() = base.to_string());
 }
@@ -6460,8 +6918,8 @@ pub(crate) fn resolve_embedded(name: &str) -> Option<&'static [u8]> {
 pub(crate) fn skip_shebang(content: &[u8]) -> &[u8] {
     if content.starts_with(b"#") {
         match content.iter().position(|&b| b == b'\n') {
-            | Some(pos) => &content[pos..],
-            | None => &[],
+            Some(pos) => &content[pos..],
+            None => &[],
         }
     } else {
         content
@@ -6488,7 +6946,13 @@ pub unsafe fn lual_loadfilex(state: *mut State, filename: *const i8, mode: *cons
                     let content = skip_shebang(raw);
                     lua_pushfstring(state, c"@%s".as_ptr(), &[filename.into()]);
                     let name_ptr = lua_tolstring(state, -1, null_mut());
-                    let status = lual_loadbufferx(state, content.as_ptr() as *const i8, content.len(), name_ptr, mode);
+                    let status = lual_loadbufferx(
+                        state,
+                        content.as_ptr() as *const i8,
+                        content.len(),
+                        name_ptr,
+                        mode,
+                    );
                     lua_rotate(state, fnameindex, -1);
                     lua_settop(state, -2);
                     return status;
@@ -6501,24 +6965,34 @@ pub unsafe fn lual_loadfilex(state: *mut State, filename: *const i8, mode: *cons
         } else {
             lua_pushfstring(state, c"@%s".as_ptr(), &[filename.into()]);
             let fname_cstr = std::ffi::CStr::from_ptr(filename);
-            match fname_cstr.to_str().ok().and_then(|s| std::fs::File::open(s).ok()) {
-                | Some(file) => {
+            match fname_cstr
+                .to_str()
+                .ok()
+                .and_then(|s| std::fs::File::open(s).ok())
+            {
+                Some(file) => {
                     lf.loadf_source = Some(LoadSource::File(file));
-                },
-                | None => {
+                }
+                None => {
                     // Fallback: try embedded resources relative to current embedded base dir
                     if let Ok(fname_str) = fname_cstr.to_str()
                         && let Some(raw) = resolve_embedded(fname_str)
                     {
                         let content = skip_shebang(raw);
                         let name_ptr = lua_tolstring(state, -1, null_mut());
-                        let status = lual_loadbufferx(state, content.as_ptr() as *const i8, content.len(), name_ptr, mode);
+                        let status = lual_loadbufferx(
+                            state,
+                            content.as_ptr() as *const i8,
+                            content.len(),
+                            name_ptr,
+                            mode,
+                        );
                         lua_rotate(state, fnameindex, -1);
                         lua_settop(state, -2);
                         return status;
                     }
                     return errfile(state, c"open".as_ptr(), fnameindex);
-                },
+                }
             }
         }
         lf.loadf_n = 0;
@@ -6532,13 +7006,17 @@ pub unsafe fn lual_loadfilex(state: *mut State, filename: *const i8, mode: *cons
             if !filename.is_null() {
                 // On Unix, "r" and "rb" are identical; just reopen the file
                 let fname_cstr = std::ffi::CStr::from_ptr(filename);
-                match fname_cstr.to_str().ok().and_then(|s| std::fs::File::open(s).ok()) {
-                    | Some(file) => {
+                match fname_cstr
+                    .to_str()
+                    .ok()
+                    .and_then(|s| std::fs::File::open(s).ok())
+                {
+                    Some(file) => {
                         lf.loadf_source = Some(LoadSource::File(file));
-                    },
-                    | None => {
+                    }
+                    None => {
                         return errfile(state, c"reopen".as_ptr(), fnameindex);
-                    },
+                    }
                 }
                 skipcomment(lf.loadf_source.as_mut().unwrap(), &mut c);
             }
@@ -6590,7 +7068,11 @@ pub unsafe fn lual_loadbufferx(state: *mut State, buffer: *const i8, size: usize
             get_s as unsafe fn(*mut State, *mut std::ffi::c_void, *mut usize) -> *const i8,
         ));
         lua_load(
-            state, reader, &mut load_s as *mut VectorT<i8> as *mut std::ffi::c_void, name, mode,
+            state,
+            reader,
+            &mut load_s as *mut VectorT<i8> as *mut std::ffi::c_void,
+            name,
+            mode,
         )
     }
 }
@@ -6643,50 +7125,72 @@ pub unsafe fn lual_tolstring(state: *mut State, mut index: i32, length: *mut usi
             }
         } else {
             match lua_type(state, index) {
-                | Some(TagType::Numeric) => {
+                Some(TagType::Numeric) => {
                     if lua_isinteger(state, index) {
-                        lua_pushfstring(state, c"%I".as_ptr(), &[lua_tointegerx(state, index, null_mut()).into()]);
+                        lua_pushfstring(
+                            state,
+                            c"%I".as_ptr(),
+                            &[lua_tointegerx(state, index, null_mut()).into()],
+                        );
                     } else {
-                        lua_pushfstring(state, c"%f".as_ptr(), &[lua_tonumberx(state, index, null_mut()).into()]);
+                        lua_pushfstring(
+                            state,
+                            c"%f".as_ptr(),
+                            &[lua_tonumberx(state, index, null_mut()).into()],
+                        );
                     }
-                },
-                | Some(TagType::String) => {
+                }
+                Some(TagType::String) => {
                     lua_pushvalue(state, index);
-                },
-                | Some(TagType::Boolean) => {
+                }
+                Some(TagType::Boolean) => {
                     lua_pushstring(
                         state,
-                        if lua_toboolean(state, index) { c"true".as_ptr() } else { c"false".as_ptr() },
+                        if lua_toboolean(state, index) {
+                            c"true".as_ptr()
+                        } else {
+                            c"false".as_ptr()
+                        },
                     );
-                },
-                | Some(TagType::Nil) => {
+                }
+                Some(TagType::Nil) => {
                     lua_pushstring(state, c"nil".as_ptr());
-                },
-                | _ => {
+                }
+                _ => {
                     let tagtype = lual_getmetafield(state, index, c"__name".as_ptr());
                     let kind: *const i8 = if tagtype == TagType::String {
                         lua_tolstring(state, -1, null_mut())
                     } else {
                         lua_typename(state, lua_type(state, index))
                     };
-                    lua_pushfstring(state, c"%s: %p".as_ptr(), &[kind.into(), (*state).to_pointer(index).into()]);
+                    lua_pushfstring(
+                        state,
+                        c"%s: %p".as_ptr(),
+                        &[kind.into(), (*state).to_pointer(index).into()],
+                    );
                     if tagtype != TagType::Nil {
                         lua_rotate(state, -2, -1);
                         lua_settop(state, -2);
                     }
-                },
+                }
             }
         }
         lua_tolstring(state, -1, length)
     }
 }
 pub unsafe fn lual_setfuncs(
-    state: *mut State, registered_functions: *const RegisteredFunction, count_registered_functions: usize, count_upvalues: i32,
+    state: *mut State,
+    registered_functions: *const RegisteredFunction,
+    count_registered_functions: usize,
+    count_upvalues: i32,
 ) {
     unsafe {
         lual_checkstack(state, count_upvalues, c"too many upvalues".as_ptr());
         for it in 0..count_registered_functions {
-            if (*registered_functions.add(it)).registeredfunction_function.is_none() {
+            if (*registered_functions.add(it))
+                .registeredfunction_function
+                .is_none()
+            {
                 (*state).push_boolean(false);
             } else {
                 for _ in 0..count_upvalues {
@@ -6857,7 +7361,7 @@ pub unsafe fn warnfon(arbitrary_data: *mut std::ffi::c_void, message: *const i8,
     }
 }
 pub unsafe fn lual_newstate() -> (*mut Global, *mut State) {
-    use std::alloc::{Layout, alloc_zeroed, dealloc};
+    use std::alloc::{alloc_zeroed, dealloc, Layout};
     unsafe {
         let global_layout = Layout::new::<Global>();
         let global = alloc_zeroed(global_layout) as *mut Global;
@@ -6910,7 +7414,8 @@ pub unsafe fn luab_print(state: *mut State) -> i32 {
             if i > 1 {
                 out.write_all(b"\t").ok();
             }
-            out.write_all(std::slice::from_raw_parts(s as *const u8, l)).ok();
+            out.write_all(std::slice::from_raw_parts(s as *const u8, l))
+                .ok();
             lua_settop(state, -2);
         }
         out.write_all(b"\n").ok();
@@ -6983,11 +7488,20 @@ pub unsafe fn print_version() {
 }
 pub unsafe fn print_usage(badoption: *const i8) {
     unsafe {
-        eprint!("{}: ", std::ffi::CStr::from_ptr(PROGRAM_NAME.load(Ordering::Relaxed)).to_string_lossy());
+        eprint!(
+            "{}: ",
+            std::ffi::CStr::from_ptr(PROGRAM_NAME.load(Ordering::Relaxed)).to_string_lossy()
+        );
         if *badoption.add(1) as i32 == Character::LowerE as i32 || *badoption.add(1) as i32 == Character::LowerL as i32 {
-            eprintln!("'{}' needs argument", std::ffi::CStr::from_ptr(badoption).to_string_lossy());
+            eprintln!(
+                "'{}' needs argument",
+                std::ffi::CStr::from_ptr(badoption).to_string_lossy()
+            );
         } else {
-            eprintln!("unrecognized option '{}'", std::ffi::CStr::from_ptr(badoption).to_string_lossy());
+            eprintln!(
+                "unrecognized option '{}'",
+                std::ffi::CStr::from_ptr(badoption).to_string_lossy()
+            );
         }
         eprint!(
             "usage: {} [options] [script [args]]\nAvailable options are:\n  -e stat   execute string 'stat'\n  -i        enter interactive mode after executing 'script'\n  -l mod    require library 'mod' into global 'mod'\n  -l g=mod  require library 'mod' into global 'g'\n  -v        show version information\n  -E        ignore environment variables\n  -W        turn warnings on\n  --        stop handling options\n  --bare    standard Lua state (skip embedded app)\n  -         stop handling options and execute stdin\n",
@@ -7147,9 +7661,13 @@ pub unsafe fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32 {
             const ARG_EXECUTE_LIBRARY: usize = 2;
             let arg_action: usize;
             match Character::from_negative(*(*argv.add(i as usize)).add(1) as i32) {
-                | Some(Character::Hyphen) => {
+                Some(Character::Hyphen) => {
                     if *(*argv.add(i as usize)).add(2) as i32 == Character::Null as i32 {
-                        *first = if !(*argv.add((i + 1) as usize)).is_null() { i + 1 } else { 0 };
+                        *first = if !(*argv.add((i + 1) as usize)).is_null() {
+                            i + 1
+                        } else {
+                            0
+                        };
                         return args;
                     }
                     let rest = std::ffi::CStr::from_ptr((*argv.add(i as usize)).add(2));
@@ -7160,55 +7678,55 @@ pub unsafe fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32 {
                     } else {
                         return 1;
                     }
-                },
-                | Some(Character::Null) => {
+                }
+                Some(Character::Null) => {
                     return args;
-                },
-                | Some(Character::UpperE) => {
+                }
+                Some(Character::UpperE) => {
                     if *(*argv.add(i as usize)).add(2) as i32 != Character::Null as i32 {
                         return 1;
                     }
                     args |= ARGS_NOENV;
                     arg_action = ARG_NEXT;
-                },
-                | Some(Character::UpperW) => {
+                }
+                Some(Character::UpperW) => {
                     if *(*argv.add(i as usize)).add(2) as i32 != Character::Null as i32 {
                         return 1;
                     }
                     arg_action = ARG_NEXT;
-                },
-                | Some(Character::LowerI) => {
+                }
+                Some(Character::LowerI) => {
                     args |= ARGS_INTERACTIVE;
                     arg_action = ARG_VERSION_INFO;
-                },
-                | Some(Character::LowerV) => {
+                }
+                Some(Character::LowerV) => {
                     arg_action = ARG_VERSION_INFO;
-                },
-                | Some(Character::LowerE) => {
+                }
+                Some(Character::LowerE) => {
                     args |= ARGS_EXECUTE;
                     arg_action = ARG_EXECUTE_LIBRARY;
-                },
-                | Some(Character::LowerL) => {
+                }
+                Some(Character::LowerL) => {
                     arg_action = ARG_EXECUTE_LIBRARY;
-                },
-                | _ => return 1,
+                }
+                _ => return 1,
             }
             match arg_action {
-                | ARG_VERSION_INFO => {
+                ARG_VERSION_INFO => {
                     if *(*argv.add(i as usize)).add(2) as i32 != Character::Null as i32 {
                         return 1;
                     }
                     args |= ARGS_VERSION;
-                },
-                | ARG_EXECUTE_LIBRARY => {
+                }
+                ARG_EXECUTE_LIBRARY => {
                     if *(*argv.add(i as usize)).add(2) as i32 == Character::Null as i32 {
                         i += 1;
                         if (*argv.add(i as usize)).is_null() || *(*argv.add(i as usize)).add(0) as i32 == Character::Hyphen as i32 {
                             return 1;
                         }
                     }
-                },
-                | _ => {},
+                }
+                _ => {}
             }
             i += 1;
         }
@@ -7222,7 +7740,7 @@ pub unsafe fn runargs(state: *mut State, argv: *mut *mut i8, n: i32) -> i32 {
         while i < n {
             let option: Character = Character::from(*(*argv.add(i as usize)).add(1) as i32);
             match option {
-                | Character::LowerE | Character::LowerL => {
+                Character::LowerE | Character::LowerL => {
                     let mut extra: *mut i8 = (*argv.add(i as usize)).add(2);
                     if *extra as i32 == Character::Null as i32 {
                         i += 1;
@@ -7236,11 +7754,11 @@ pub unsafe fn runargs(state: *mut State, argv: *mut *mut i8, n: i32) -> i32 {
                     if status != Status::OK {
                         return 0;
                     }
-                },
-                | Character::UpperW => {
+                }
+                Character::UpperW => {
                     luae_warning(state, c"@on".as_ptr(), 0);
-                },
-                | _ => {},
+                }
+                _ => {}
             }
             i += 1;
         }
@@ -7249,8 +7767,20 @@ pub unsafe fn runargs(state: *mut State, argv: *mut *mut i8, n: i32) -> i32 {
 }
 pub unsafe fn get_prompt(state: *mut State, firstline: i32) -> *const i8 {
     unsafe {
-        if lua_getglobal(state, if firstline != 0 { c"_PROMPT".as_ptr() } else { c"_PROMPT2".as_ptr() }) == TagType::Nil {
-            if firstline != 0 { c"> ".as_ptr() } else { c">> ".as_ptr() }
+        if lua_getglobal(
+            state,
+            if firstline != 0 {
+                c"_PROMPT".as_ptr()
+            } else {
+                c"_PROMPT2".as_ptr()
+            },
+        ) == TagType::Nil
+        {
+            if firstline != 0 {
+                c"> ".as_ptr()
+            } else {
+                c">> ".as_ptr()
+            }
         } else {
             let p: *const i8 = lual_tolstring(state, -1, null_mut());
             lua_rotate(state, -2, -1);
@@ -7313,7 +7843,13 @@ pub unsafe fn addreturn(state: *mut State) -> Status {
     unsafe {
         let line: *const i8 = lua_tolstring(state, -1, null_mut());
         let retline: *const i8 = lua_pushfstring(state, c"return %s;".as_ptr(), &[line.into()]);
-        let status = lual_loadbufferx(state, retline, cstr_len(retline), c"=stdin".as_ptr(), null());
+        let status = lual_loadbufferx(
+            state,
+            retline,
+            cstr_len(retline),
+            c"=stdin".as_ptr(),
+            null(),
+        );
         if status == Status::OK {
             lua_rotate(state, -2, -1);
             lua_settop(state, -2);
@@ -7370,12 +7906,12 @@ pub unsafe fn loadline(state: *mut State) -> Status {
 pub unsafe fn finishpcall(state: *mut State, status: Status, extra: i64) -> i32 {
     unsafe {
         match status {
-            | Status::OK | Status::Yield => (*state).get_top() - extra as i32,
-            | _ => {
+            Status::OK | Status::Yield => (*state).get_top() - extra as i32,
+            _ => {
                 (*state).push_boolean(false);
                 lua_pushvalue(state, -2);
                 2
-            },
+            }
         }
     }
 }
@@ -7445,7 +7981,11 @@ pub unsafe fn auxupvalue(state: *mut State, get: i32) -> i32 {
     unsafe {
         let n: i32 = lual_checkinteger(state, 2) as i32;
         (*state).lual_checktype(1, TagType::Closure);
-        let name: *const i8 = if get != 0 { lua_getupvalue(state, 1, n) } else { lua_setupvalue(state, 1, n) };
+        let name: *const i8 = if get != 0 {
+            lua_getupvalue(state, 1, n)
+        } else {
+            lua_setupvalue(state, 1, n)
+        };
         if name.is_null() {
             0
         } else {

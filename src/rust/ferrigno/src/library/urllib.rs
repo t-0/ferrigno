@@ -37,7 +37,10 @@ const CURLINFO_RESPONSE_CODE: std::ffi::c_int = 0x200002;
 
 // Write callback: appends received data into a Vec<u8>.
 unsafe extern "C" fn write_callback(
-    data: *const std::ffi::c_char, size: usize, nmemb: usize, userdata: *mut std::ffi::c_void,
+    data: *const std::ffi::c_char,
+    size: usize,
+    nmemb: usize,
+    userdata: *mut std::ffi::c_void,
 ) -> usize {
     unsafe {
         let buf = userdata as *mut Vec<u8>;
@@ -50,7 +53,10 @@ unsafe extern "C" fn write_callback(
 
 // Header callback: appends raw header lines into a Vec<u8>.
 unsafe extern "C" fn header_callback(
-    data: *const std::ffi::c_char, size: usize, nmemb: usize, userdata: *mut std::ffi::c_void,
+    data: *const std::ffi::c_char,
+    size: usize,
+    nmemb: usize,
+    userdata: *mut std::ffi::c_void,
 ) -> usize {
     unsafe {
         let buf = userdata as *mut Vec<u8>;
@@ -84,15 +90,19 @@ fn percent_encode(input: &[u8]) -> Vec<u8> {
 }
 
 fn hex_nibble(n: u8) -> u8 {
-    if n < 10 { b'0' + n } else { b'A' + n - 10 }
+    if n < 10 {
+        b'0' + n
+    } else {
+        b'A' + n - 10
+    }
 }
 
 fn from_hex(b: u8) -> Option<u8> {
     match b {
-        | b'0'..=b'9' => Some(b - b'0'),
-        | b'a'..=b'f' => Some(b - b'a' + 10),
-        | b'A'..=b'F' => Some(b - b'A' + 10),
-        | _ => None,
+        b'0'..=b'9' => Some(b - b'0'),
+        b'a'..=b'f' => Some(b - b'a' + 10),
+        b'A'..=b'F' => Some(b - b'A' + 10),
+        _ => None,
     }
 }
 
@@ -174,7 +184,11 @@ fn parse_url(url: &[u8]) -> ParsedUrl {
         if let Some(close) = memchr(hostpart, b']') {
             let h = hostpart[1..close].to_vec();
             let after = &hostpart[close + 1..];
-            let port = if after.starts_with(b":") { parse_port(&after[1..]) } else { None };
+            let port = if after.starts_with(b":") {
+                parse_port(&after[1..])
+            } else {
+                None
+            };
             (h, port)
         } else {
             (hostpart.to_vec(), None)
@@ -185,7 +199,16 @@ fn parse_url(url: &[u8]) -> ParsedUrl {
         (h.to_vec(), port)
     };
 
-    ParsedUrl { scheme, user, password, host, port, path, query, fragment }
+    ParsedUrl {
+        scheme,
+        user,
+        password,
+        host,
+        port,
+        path,
+        query,
+        fragment,
+    }
 }
 
 fn split_off(s: &[u8], sep: u8) -> (&[u8], Option<&[u8]>) {
@@ -197,7 +220,11 @@ fn split_off(s: &[u8], sep: u8) -> (&[u8], Option<&[u8]>) {
 }
 
 fn split_at_slash(s: &[u8]) -> (&[u8], &[u8]) {
-    if let Some(pos) = memchr(s, b'/') { (&s[..pos], &s[pos..]) } else { (s, b"/") }
+    if let Some(pos) = memchr(s, b'/') {
+        (&s[..pos], &s[pos..])
+    } else {
+        (s, b"/")
+    }
 }
 
 fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
@@ -213,13 +240,18 @@ fn memrchr(s: &[u8], c: u8) -> Option<usize> {
 }
 
 fn parse_port(s: &[u8]) -> Option<u16> {
-    let n: u32 = s.iter().try_fold(
-        0u32,
-        |acc, &b| {
-            if b.is_ascii_digit() { Some(acc * 10 + (b - b'0') as u32) } else { None }
-        },
-    )?;
-    if n <= 65535 { Some(n as u16) } else { None }
+    let n: u32 = s.iter().try_fold(0u32, |acc, &b| {
+        if b.is_ascii_digit() {
+            Some(acc * 10 + (b - b'0') as u32)
+        } else {
+            None
+        }
+    })?;
+    if n <= 65535 {
+        Some(n as u16)
+    } else {
+        None
+    }
 }
 
 // ─── HTTP request helper ──────────────────────────────────────────────────────
@@ -241,7 +273,11 @@ unsafe fn do_request(
         // Null-terminate the URL
         let mut url_buf = url.to_vec();
         url_buf.push(0);
-        curl_easy_setopt(curl, CURLOPT_URL, url_buf.as_ptr() as *const std::ffi::c_char);
+        curl_easy_setopt(
+            curl,
+            CURLOPT_URL,
+            url_buf.as_ptr() as *const std::ffi::c_char,
+        );
 
         // Follow redirects
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1i64);
@@ -251,14 +287,28 @@ unsafe fn do_request(
 
         // Write callback for body
         let mut body_buf: Vec<u8> = Vec::new();
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback as *mut std::ffi::c_void);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &mut body_buf as *mut Vec<u8> as *mut std::ffi::c_void);
+        curl_easy_setopt(
+            curl,
+            CURLOPT_WRITEFUNCTION,
+            write_callback as *mut std::ffi::c_void,
+        );
+        curl_easy_setopt(
+            curl,
+            CURLOPT_WRITEDATA,
+            &mut body_buf as *mut Vec<u8> as *mut std::ffi::c_void,
+        );
 
         // Header callback
         let mut header_buf: Vec<u8> = Vec::new();
-        curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_callback as *mut std::ffi::c_void);
         curl_easy_setopt(
-            curl, CURLOPT_HEADERDATA, &mut header_buf as *mut Vec<u8> as *mut std::ffi::c_void,
+            curl,
+            CURLOPT_HEADERFUNCTION,
+            header_callback as *mut std::ffi::c_void,
+        );
+        curl_easy_setopt(
+            curl,
+            CURLOPT_HEADERDATA,
+            &mut header_buf as *mut Vec<u8> as *mut std::ffi::c_void,
         );
 
         // Custom headers
@@ -268,29 +318,41 @@ unsafe fn do_request(
 
         // Method / body
         match method {
-            | b"GET" | b"get" => {},
-            | b"POST" | b"post" => {
+            b"GET" | b"get" => {}
+            b"POST" | b"post" => {
                 curl_easy_setopt(curl, CURLOPT_POST, 1i64);
                 if let Some(data) = body {
-                    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.as_ptr() as *const std::ffi::c_char);
+                    curl_easy_setopt(
+                        curl,
+                        CURLOPT_POSTFIELDS,
+                        data.as_ptr() as *const std::ffi::c_char,
+                    );
                     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, data.len() as i64);
                 } else {
                     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, c"".as_ptr());
                     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, 0i64);
                 }
-            },
-            | m => {
+            }
+            m => {
                 let mut understudy = m.to_vec();
                 for b in &mut understudy {
                     *b = b.to_ascii_uppercase();
                 }
                 understudy.push(0);
-                curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, understudy.as_ptr() as *const std::ffi::c_char);
+                curl_easy_setopt(
+                    curl,
+                    CURLOPT_CUSTOMREQUEST,
+                    understudy.as_ptr() as *const std::ffi::c_char,
+                );
                 if let Some(data) = body {
-                    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.as_ptr() as *const std::ffi::c_char);
+                    curl_easy_setopt(
+                        curl,
+                        CURLOPT_POSTFIELDS,
+                        data.as_ptr() as *const std::ffi::c_char,
+                    );
                     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, data.len() as i64);
                 }
-            },
+            }
         }
 
         let rc = curl_easy_perform(curl);
@@ -343,12 +405,12 @@ unsafe fn push_header_table(state: *mut State, raw: &[u8]) {
                     combined.extend_from_slice(b", ");
                     combined.extend_from_slice(value_raw);
                     lua_settop(state, -2); // pop old value
-                    // Push key again
+                                           // Push key again
                     lua_pushlstring(state, name.as_ptr() as *const i8, name.len());
                     lua_pushlstring(state, combined.as_ptr() as *const i8, combined.len());
                 } else {
                     lua_settop(state, -2); // pop nil/other
-                    // Push key+value fresh
+                                           // Push key+value fresh
                     lua_pushlstring(state, name.as_ptr() as *const i8, name.len());
                     lua_pushlstring(state, value_raw.as_ptr() as *const i8, value_raw.len());
                 }
@@ -367,9 +429,20 @@ fn strip_crlf(s: &[u8]) -> &[u8] {
 }
 
 fn trim_bytes(s: &[u8]) -> &[u8] {
-    let start = s.iter().position(|&b| b != b' ' && b != b'\t').unwrap_or(s.len());
-    let end = s.iter().rposition(|&b| b != b' ' && b != b'\t').map(|i| i + 1).unwrap_or(0);
-    if start >= end { &[] } else { &s[start..end] }
+    let start = s
+        .iter()
+        .position(|&b| b != b' ' && b != b'\t')
+        .unwrap_or(s.len());
+    let end = s
+        .iter()
+        .rposition(|&b| b != b' ' && b != b'\t')
+        .map(|i| i + 1)
+        .unwrap_or(0);
+    if start >= end {
+        &[]
+    } else {
+        &s[start..end]
+    }
 }
 
 /// Build a curl_slist from a Lua table at stack index `idx`.
@@ -378,7 +451,11 @@ unsafe fn build_header_slist(state: *mut State, idx: i32) -> *mut std::ffi::c_vo
     unsafe {
         let mut list: *mut std::ffi::c_void = null_mut();
         (*state).push_nil();
-        let abs_idx = if idx < 0 { (*state).get_top() + idx } else { idx };
+        let abs_idx = if idx < 0 {
+            (*state).get_top() + idx
+        } else {
+            idx
+        };
         while lua_next(state, abs_idx) != 0 {
             // Capture absolute positions before lual_tolstring shifts the stack
             let abs_key = (*state).get_top() - 1;
@@ -498,17 +575,17 @@ pub unsafe fn urllib_request(state: *mut State) -> i32 {
         }
 
         match result {
-            | Ok((body, status, raw_headers)) => {
+            Ok((body, status, raw_headers)) => {
                 lua_pushlstring(state, body.as_ptr() as *const i8, body.len());
                 (*state).push_integer(status);
                 push_header_table(state, &raw_headers);
                 3
-            },
-            | Err(msg) => {
+            }
+            Err(msg) => {
                 (*state).push_nil();
                 lua_pushlstring(state, msg.as_ptr() as *const i8, msg.len());
                 2
-            },
+            }
         }
     }
 }
@@ -532,17 +609,17 @@ pub unsafe fn urllib_get(state: *mut State) -> i32 {
         }
 
         match result {
-            | Ok((body, status, raw_headers)) => {
+            Ok((body, status, raw_headers)) => {
                 lua_pushlstring(state, body.as_ptr() as *const i8, body.len());
                 (*state).push_integer(status);
                 push_header_table(state, &raw_headers);
                 3
-            },
-            | Err(msg) => {
+            }
+            Err(msg) => {
                 (*state).push_nil();
                 lua_pushlstring(state, msg.as_ptr() as *const i8, msg.len());
                 2
-            },
+            }
         }
     }
 }
@@ -570,17 +647,17 @@ pub unsafe fn urllib_post(state: *mut State) -> i32 {
         }
 
         match result {
-            | Ok((body, status, raw_headers)) => {
+            Ok((body, status, raw_headers)) => {
                 lua_pushlstring(state, body.as_ptr() as *const i8, body.len());
                 (*state).push_integer(status);
                 push_header_table(state, &raw_headers);
                 3
-            },
-            | Err(msg) => {
+            }
+            Err(msg) => {
                 (*state).push_nil();
                 lua_pushlstring(state, msg.as_ptr() as *const i8, msg.len());
                 2
-            },
+            }
         }
     }
 }

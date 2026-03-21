@@ -87,11 +87,18 @@ pub unsafe fn str_rep(state: *mut State) -> i32 {
             lua_pushstring(state, c"".as_ptr());
         } else if l.wrapping_add(lsep) < l
             || l.wrapping_add(lsep)
-                > ((if size_of::<usize>() < size_of::<i32>() { !(0usize) } else { MAX_INT }) as usize) / n as usize
+                > ((if size_of::<usize>() < size_of::<i32>() {
+                    !(0usize)
+                } else {
+                    MAX_INT
+                }) as usize)
+                    / n as usize
         {
             return lual_error(state, c"resulting string too large".as_ptr(), &[]);
         } else {
-            let totallen: usize = (n as usize).wrapping_mul(l).wrapping_add(((n - 1) as usize) * lsep);
+            let totallen: usize = (n as usize)
+                .wrapping_mul(l)
+                .wrapping_add(((n - 1) as usize) * lsep);
             let mut b = Buffer::new();
             let mut p: *mut i8 = b.initialize_with_size(state, totallen);
             loop {
@@ -171,9 +178,11 @@ pub unsafe fn trymt(state: *mut State, mtname: *const i8) {
             lual_error(
                 state,
                 c"attempt to %s a '%s' with a '%s'".as_ptr(),
-                &[mtname.add(2).into(),
-                lua_typename(state, lua_type(state, -2)).into(),
-                lua_typename(state, lua_type(state, -1)).into()],
+                &[
+                    mtname.add(2).into(),
+                    lua_typename(state, lua_type(state, -2)).into(),
+                    lua_typename(state, lua_type(state, -1)).into(),
+                ],
             );
         }
         lua_rotate(state, -3, 1);
@@ -345,7 +354,10 @@ pub unsafe fn str_find_aux(state: *mut State, find: i32) -> i32 {
                 matchstate_interpreter: null_mut(),
                 matchdepth: 0,
                 level: 0,
-                capture: [MatchStateCapture { matchstatecapture_initial: null(), matchstatecapture_length: 0 }; 32],
+                capture: [MatchStateCapture {
+                    matchstatecapture_initial: null(),
+                    matchstatecapture_length: 0,
+                }; 32],
             };
             let mut s1: *const i8 = s.add(initial);
             let anchor: i32 = (*p as i32 == Character::Caret as i32) as i32;
@@ -402,7 +414,10 @@ pub unsafe fn str_gsub(state: *mut State) -> i32 {
             matchstate_interpreter: null_mut(),
             matchdepth: 0,
             level: 0,
-            capture: [MatchStateCapture { matchstatecapture_initial: null(), matchstatecapture_length: 0 }; 32],
+            capture: [MatchStateCapture {
+                matchstatecapture_initial: null(),
+                matchstatecapture_length: 0,
+            }; 32],
         };
         let mut b = Buffer::new();
         if !(tr == Some(TagType::Numeric)
@@ -435,7 +450,8 @@ pub unsafe fn str_gsub(state: *mut State) -> i32 {
                 let current_src = src;
                 src = src.add(1);
                 let write_offset = b.buffer_loads.get_length();
-                b.buffer_loads.set_length((b.buffer_loads.get_length() + 1) as usize);
+                b.buffer_loads
+                    .set_length((b.buffer_loads.get_length() + 1) as usize);
                 *(b.buffer_loads.loads_pointer).add(write_offset as usize) = *current_src;
             }
             if anchor != 0 {
@@ -458,7 +474,8 @@ pub unsafe fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: usize) {
             ((*b).prepare_with_size(1)).is_null();
         }
         let write_offset = (*b).buffer_loads.get_length();
-        (*b).buffer_loads.set_length(((*b).buffer_loads.get_length() + 1) as usize);
+        (*b).buffer_loads
+            .set_length(((*b).buffer_loads.get_length() + 1) as usize);
         *((*b).buffer_loads.loads_pointer).add(write_offset as usize) = '"' as i8;
         loop {
             if length == 0 {
@@ -470,13 +487,15 @@ pub unsafe fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: usize) {
                     ((*b).prepare_with_size(1)).is_null();
                 }
                 let write_offset = (*b).buffer_loads.get_length();
-                (*b).buffer_loads.set_length(((*b).buffer_loads.get_length() + 1) as usize);
+                (*b).buffer_loads
+                    .set_length(((*b).buffer_loads.get_length() + 1) as usize);
                 *((*b).buffer_loads.loads_pointer).add(write_offset as usize) = Character::Backslash as i8;
                 if (*b).buffer_loads.get_length() >= (*b).buffer_loads.get_size() {
                     ((*b).prepare_with_size(1)).is_null();
                 }
                 let write_offset = (*b).buffer_loads.get_length();
-                (*b).buffer_loads.set_length(((*b).buffer_loads.get_length() + 1) as usize);
+                (*b).buffer_loads
+                    .set_length(((*b).buffer_loads.get_length() + 1) as usize);
                 *((*b).buffer_loads.loads_pointer).add(write_offset as usize) = *s;
             } else if Character::from(*s as u8 as i32).is_control() {
                 let mut buffer: [i8; 10] = [0; 10];
@@ -498,7 +517,8 @@ pub unsafe fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: usize) {
                     ((*b).prepare_with_size(1)).is_null();
                 }
                 let write_offset = (*b).buffer_loads.get_length();
-                (*b).buffer_loads.set_length(((*b).buffer_loads.get_length() + 1) as usize);
+                (*b).buffer_loads
+                    .set_length(((*b).buffer_loads.get_length() + 1) as usize);
                 *((*b).buffer_loads.loads_pointer).add(write_offset as usize) = *s;
             }
             s = s.add(1);
@@ -507,7 +527,8 @@ pub unsafe fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: usize) {
             ((*b).prepare_with_size(1)).is_null();
         }
         let write_offset = (*b).buffer_loads.get_length();
-        (*b).buffer_loads.set_length(((*b).buffer_loads.get_length() + 1) as usize);
+        (*b).buffer_loads
+            .set_length(((*b).buffer_loads.get_length() + 1) as usize);
         *((*b).buffer_loads.loads_pointer).add(write_offset as usize) = '"' as i8;
     }
 }
@@ -541,12 +562,12 @@ unsafe fn parse_fmt_spec(form: *const i8) -> FmtSpec {
         let mut i = 1usize;
         loop {
             match *form.add(i) as u8 {
-                | b'-' => s.left = true,
-                | b'+' => s.sign = true,
-                | b' ' => s.space = true,
-                | b'0' => s.zero = true,
-                | b'#' => s.alt = true,
-                | _ => break,
+                b'-' => s.left = true,
+                b'+' => s.sign = true,
+                b' ' => s.space = true,
+                b'0' => s.zero = true,
+                b'#' => s.alt = true,
+                _ => break,
             }
             i += 1;
         }
@@ -562,7 +583,10 @@ unsafe fn parse_fmt_spec(form: *const i8) -> FmtSpec {
                 i += 1;
             }
         }
-        while matches!(*form.add(i) as u8, b'l' | b'h' | b'L' | b'z' | b'j' | b't' | b'q') {
+        while matches!(
+            *form.add(i) as u8,
+            b'l' | b'h' | b'L' | b'z' | b'j' | b't' | b'q'
+        ) {
             i += 1;
         }
         if *form.add(i) != 0 {
@@ -619,7 +643,11 @@ fn fmt_hex_float(out: &mut [u8], value: f64, prec: i32, uppercase: bool) -> usiz
     let is_neg = (bits >> 63) != 0;
     let raw_exp = ((bits >> 52) & 0x7ff) as i32;
     let raw_mant = bits & 0x000fffffffffffff;
-    let hex: &[u8; 16] = if uppercase { b"0123456789ABCDEF" } else { b"0123456789abcdef" };
+    let hex: &[u8; 16] = if uppercase {
+        b"0123456789ABCDEF"
+    } else {
+        b"0123456789abcdef"
+    };
     let mut pos = 0;
 
     if is_neg {
@@ -652,7 +680,11 @@ fn fmt_hex_float(out: &mut [u8], value: f64, prec: i32, uppercase: bool) -> usiz
         return pos;
     }
 
-    let (mut lead, mut exp) = if raw_exp == 0 { (0u64, -1022i32) } else { (1u64, raw_exp - 1023) };
+    let (mut lead, mut exp) = if raw_exp == 0 {
+        (0u64, -1022i32)
+    } else {
+        (1u64, raw_exp - 1023)
+    };
     let mut mant = raw_mant;
 
     let ndigits = if prec >= 0 {
@@ -692,7 +724,11 @@ fn fmt_hex_float(out: &mut [u8], value: f64, prec: i32, uppercase: bool) -> usiz
         out[pos] = b'.';
         pos += 1;
         for i in 0..ndigits {
-            let nibble = if i < 13 { (mant >> (48 - 4 * i)) & 0xf } else { 0 };
+            let nibble = if i < 13 {
+                (mant >> (48 - 4 * i)) & 0xf
+            } else {
+                0
+            };
             out[pos] = hex[nibble as usize];
             pos += 1;
         }
@@ -717,8 +753,8 @@ fn fmt_hex_float(out: &mut [u8], value: f64, prec: i32, uppercase: bool) -> usiz
 fn fix_sci_exponent(buf: &mut [u8], len: usize) -> usize {
     use std::io::Write;
     let e_pos = match buf[..len].iter().position(|&b| b == b'e' || b == b'E') {
-        | Some(p) => p,
-        | None => return len,
+        Some(p) => p,
+        None => return len,
     };
     let e_char = buf[e_pos];
     let exp_str = std::str::from_utf8(&buf[e_pos + 1..len]).unwrap_or("0");
@@ -760,18 +796,22 @@ unsafe fn sprintf_int(buf: *mut i8, size: usize, form: *const i8, value: i64) ->
     let is_signed = matches!(spec.spec, b'd' | b'i');
     let uval = value as u64;
     let is_neg = value < 0 && is_signed;
-    let abs_val = if is_neg { (0u64).wrapping_sub(uval) } else { uval };
+    let abs_val = if is_neg {
+        (0u64).wrapping_sub(uval)
+    } else {
+        uval
+    };
 
     let mut digits = [0u8; 64];
     let dlen = {
         let mut c = std::io::Cursor::new(&mut digits[..]);
         match spec.spec {
-            | b'd' | b'i' => write!(c, "{}", abs_val).ok(),
-            | b'u' => write!(c, "{}", uval).ok(),
-            | b'o' => write!(c, "{:o}", uval).ok(),
-            | b'x' => write!(c, "{:x}", uval).ok(),
-            | b'X' => write!(c, "{:X}", uval).ok(),
-            | _ => None,
+            b'd' | b'i' => write!(c, "{}", abs_val).ok(),
+            b'u' => write!(c, "{}", uval).ok(),
+            b'o' => write!(c, "{:o}", uval).ok(),
+            b'x' => write!(c, "{:x}", uval).ok(),
+            b'X' => write!(c, "{:X}", uval).ok(),
+            _ => None,
         };
         c.position() as usize
     };
@@ -797,17 +837,17 @@ unsafe fn sprintf_int(buf: *mut i8, size: usize, form: *const i8, value: i64) ->
 
     if spec.alt && uval != 0 {
         match spec.spec {
-            | b'x' => {
+            b'x' => {
                 tmp[pos] = b'0';
                 tmp[pos + 1] = b'x';
                 pos += 2;
-            },
-            | b'X' => {
+            }
+            b'X' => {
                 tmp[pos] = b'0';
                 tmp[pos + 1] = b'X';
                 pos += 2;
-            },
-            | _ => {},
+            }
+            _ => {}
         }
     }
 
@@ -832,7 +872,11 @@ unsafe fn sprintf_float(buf: *mut i8, size: usize, form: *const i8, value: f64) 
     let out = unsafe { std::slice::from_raw_parts_mut(buf as *mut u8, size) };
 
     if value.is_nan() {
-        let s: &[u8] = if spec.spec.is_ascii_uppercase() { b"NAN" } else { b"nan" };
+        let s: &[u8] = if spec.spec.is_ascii_uppercase() {
+            b"NAN"
+        } else {
+            b"nan"
+        };
         return pad_formatted(out, s, spec.width, spec.left, false) as i32;
     }
     if value.is_infinite() {
@@ -848,7 +892,11 @@ unsafe fn sprintf_float(buf: *mut i8, size: usize, form: *const i8, value: f64) 
             tmp[pos] = b' ';
             pos += 1;
         }
-        let s: &[u8] = if spec.spec.is_ascii_uppercase() { b"INF" } else { b"inf" };
+        let s: &[u8] = if spec.spec.is_ascii_uppercase() {
+            b"INF"
+        } else {
+            b"inf"
+        };
         tmp[pos..pos + 3].copy_from_slice(s);
         pos += 3;
         return pad_formatted(out, &tmp[..pos], spec.width, spec.left, false) as i32;
@@ -873,7 +921,7 @@ unsafe fn sprintf_float(buf: *mut i8, size: usize, form: *const i8, value: f64) 
     }
 
     match spec.spec {
-        | b'f' | b'F' => {
+        b'f' | b'F' => {
             let mut c = std::io::Cursor::new(&mut tmp[pos..]);
             write!(c, "{:.prec$}", abs, prec = prec).ok();
             pos += c.position() as usize;
@@ -881,8 +929,8 @@ unsafe fn sprintf_float(buf: *mut i8, size: usize, form: *const i8, value: f64) 
                 tmp[pos] = b'.';
                 pos += 1;
             }
-        },
-        | b'e' | b'E' => {
+        }
+        b'e' | b'E' => {
             let mut sci = [0u8; 256];
             let mut c = std::io::Cursor::new(&mut sci[..]);
             if spec.spec == b'E' {
@@ -893,7 +941,10 @@ unsafe fn sprintf_float(buf: *mut i8, size: usize, form: *const i8, value: f64) 
             let slen = c.position() as usize;
             let slen = fix_sci_exponent(&mut sci, slen);
             if spec.alt && prec == 0 {
-                let e_pos = sci[..slen].iter().position(|&b| b == b'e' || b == b'E').unwrap_or(slen);
+                let e_pos = sci[..slen]
+                    .iter()
+                    .position(|&b| b == b'e' || b == b'E')
+                    .unwrap_or(slen);
                 if !sci[..e_pos].contains(&b'.') {
                     sci.copy_within(e_pos..slen, e_pos + 1);
                     sci[e_pos] = b'.';
@@ -908,11 +959,15 @@ unsafe fn sprintf_float(buf: *mut i8, size: usize, form: *const i8, value: f64) 
                 tmp[pos..pos + slen].copy_from_slice(&sci[..slen]);
                 pos += slen;
             }
-        },
-        | b'g' | b'G' => {
+        }
+        b'g' | b'G' => {
             let prec_g = if prec == 0 { 1 } else { prec };
             if spec.alt {
-                let exp_val = if abs == 0.0 { 0 } else { abs.log10().floor() as i32 };
+                let exp_val = if abs == 0.0 {
+                    0
+                } else {
+                    abs.log10().floor() as i32
+                };
                 if exp_val >= prec_g as i32 || exp_val < -4 {
                     let eprec = prec_g - 1;
                     let mut sci = [0u8; 256];
@@ -947,8 +1002,8 @@ unsafe fn sprintf_float(buf: *mut i8, size: usize, form: *const i8, value: f64) 
                 tmp[pos..pos + flen].copy_from_slice(&flt[..flen]);
                 pos += flen;
             }
-        },
-        | _ => {},
+        }
+        _ => {}
     }
 
     let use_zero = spec.zero && !spec.left;
@@ -1005,7 +1060,11 @@ unsafe fn sprintf_str(buf: *mut i8, size: usize, form: *const i8, value: *const 
     let spec = unsafe { parse_fmt_spec(form) };
     let out = unsafe { std::slice::from_raw_parts_mut(buf as *mut u8, size) };
     let slen = unsafe { cstr_len(value) };
-    let effective_len = if spec.prec >= 0 { slen.min(spec.prec as usize) } else { slen };
+    let effective_len = if spec.prec >= 0 {
+        slen.min(spec.prec as usize)
+    } else {
+        slen
+    };
     let content = unsafe { std::slice::from_raw_parts(value as *const u8, effective_len) };
     pad_formatted(out, content, spec.width, spec.left, false) as i32
 }
@@ -1051,12 +1110,12 @@ pub unsafe fn quotefloat(mut _state: *mut State, buffer: *mut i8, n: f64) -> i32
 pub unsafe fn addliteral(state: *mut State, b: *mut Buffer, arg: i32) {
     unsafe {
         match lua_type(state, arg) {
-            | Some(TagType::String) => {
+            Some(TagType::String) => {
                 let mut length: usize = 0;
                 let s: *const i8 = lua_tolstring(state, arg, &mut length);
                 addquoted(b, s, length);
-            },
-            | Some(TagType::Numeric) => {
+            }
+            Some(TagType::Numeric) => {
                 let buffer: *mut i8 = (*b).prepare_with_size(120);
                 let nb: i32;
                 if lua_isinteger(state, arg) {
@@ -1078,14 +1137,14 @@ pub unsafe fn addliteral(state: *mut State, b: *mut Buffer, arg: i32) {
                 }
                 (*b).buffer_loads
                     .set_length(((*b).buffer_loads.get_length() as usize + nb as usize) as usize);
-            },
-            | Some(TagType::Nil) | Some(TagType::Boolean) => {
+            }
+            Some(TagType::Nil) | Some(TagType::Boolean) => {
                 lual_tolstring(state, arg, null_mut());
                 (*b).add_value();
-            },
-            | _ => {
+            }
+            _ => {
                 lual_argerror(state, arg, c"value has no literal form".as_ptr());
-            },
+            }
         };
     }
 }
@@ -1112,7 +1171,11 @@ pub unsafe fn checkformat(state: *mut State, form: *const i8, flags: *const i8, 
             }
         }
         if !Character::from(*spec as u8 as i32).is_alpha() {
-            lual_error(state, c"invalid conversion specification: '%s'".as_ptr(), &[form.into()]);
+            lual_error(
+                state,
+                c"invalid conversion specification: '%s'".as_ptr(),
+                &[form.into()],
+            );
         }
     }
 }
@@ -1151,7 +1214,8 @@ pub unsafe fn str_format(state: *mut State) -> i32 {
                 let current_strfrmt = strfrmt;
                 strfrmt = strfrmt.add(1);
                 let write_offset = b.buffer_loads.get_length();
-                b.buffer_loads.set_length((b.buffer_loads.get_length() + 1) as usize);
+                b.buffer_loads
+                    .set_length((b.buffer_loads.get_length() + 1) as usize);
                 *(b.buffer_loads.loads_pointer).add(write_offset as usize) = *current_strfrmt;
             } else {
                 strfrmt = strfrmt.add(1);
@@ -1160,7 +1224,8 @@ pub unsafe fn str_format(state: *mut State) -> i32 {
                     let current_strfrmt = strfrmt;
                     strfrmt = strfrmt.add(1);
                     let write_offset = b.buffer_loads.get_length();
-                    b.buffer_loads.set_length((b.buffer_loads.get_length() + 1) as usize);
+                    b.buffer_loads
+                        .set_length((b.buffer_loads.get_length() + 1) as usize);
                     *(b.buffer_loads.loads_pointer).add(write_offset as usize) = *current_strfrmt;
                 } else {
                     let mut form: [i8; 32] = [0; 32];
@@ -1175,7 +1240,7 @@ pub unsafe fn str_format(state: *mut State) -> i32 {
                     let current_strfrmt = strfrmt;
                     strfrmt = strfrmt.add(1);
                     match Character::from(*current_strfrmt as i32) {
-                        | Character::LowerC => {
+                        Character::LowerC => {
                             checkformat(state, form.as_mut_ptr(), c"-".as_ptr(), 0);
                             nb = sprintf_char(
                                 buffer,
@@ -1184,51 +1249,65 @@ pub unsafe fn str_format(state: *mut State) -> i32 {
                                 lual_checkinteger(state, arg) as i32,
                             );
                             fmt_action = FMT_DONE;
-                        },
-                        | Character::LowerD | Character::LowerI => {
+                        }
+                        Character::LowerD | Character::LowerI => {
                             flags = c"-+0 ".as_ptr();
                             fmt_action = FMT_INTEGER;
-                        },
-                        | Character::LowerU => {
+                        }
+                        Character::LowerU => {
                             flags = c"-0".as_ptr();
                             fmt_action = FMT_INTEGER;
-                        },
-                        | Character::LowerO | Character::LowerX | Character::UpperX => {
+                        }
+                        Character::LowerO | Character::LowerX | Character::UpperX => {
                             flags = c"-#0".as_ptr();
                             fmt_action = FMT_INTEGER;
-                        },
-                        | Character::LowerA | Character::UpperA => {
+                        }
+                        Character::LowerA | Character::UpperA => {
                             checkformat(state, form.as_mut_ptr(), c"-+#0 ".as_ptr(), 1);
-                            nb = sprintf_hex_float_full(buffer, maxitem as usize, form.as_mut_ptr(), lual_checknumber(state, arg));
+                            nb = sprintf_hex_float_full(
+                                buffer,
+                                maxitem as usize,
+                                form.as_mut_ptr(),
+                                lual_checknumber(state, arg),
+                            );
                             fmt_action = FMT_DONE;
-                        },
-                        | Character::LowerF => {
+                        }
+                        Character::LowerF => {
                             maxitem = 110_i32 + 308_i32;
                             buffer = b.prepare_with_size(maxitem as usize);
                             fmt_action = FMT_FLOAT;
-                        },
-                        | Character::LowerE | Character::UpperE | Character::LowerG | Character::UpperG => {
+                        }
+                        Character::LowerE | Character::UpperE | Character::LowerG | Character::UpperG => {
                             fmt_action = FMT_FLOAT;
-                        },
-                        | Character::LowerP => {
+                        }
+                        Character::LowerP => {
                             let p: *const std::ffi::c_void = (*state).to_pointer(arg);
                             checkformat(state, form.as_mut_ptr(), c"-".as_ptr(), 0);
                             if p.is_null() {
                                 form[cstr_len(form.as_mut_ptr()) - 1] = Character::LowerS as i8;
-                                nb = sprintf_str(buffer, maxitem as usize, form.as_mut_ptr(), c"(null)".as_ptr());
+                                nb = sprintf_str(
+                                    buffer,
+                                    maxitem as usize,
+                                    form.as_mut_ptr(),
+                                    c"(null)".as_ptr(),
+                                );
                             } else {
                                 nb = sprintf_ptr(buffer, maxitem as usize, form.as_mut_ptr(), p);
                             }
                             fmt_action = FMT_DONE;
-                        },
-                        | Character::LowerQ => {
+                        }
+                        Character::LowerQ => {
                             if form[2_usize] as i32 != Character::Null as i32 {
-                                return lual_error(state, c"specifier '%%q' cannot have modifiers".as_ptr(), &[]);
+                                return lual_error(
+                                    state,
+                                    c"specifier '%%q' cannot have modifiers".as_ptr(),
+                                    &[],
+                                );
                             }
                             addliteral(state, &mut b, arg);
                             fmt_action = FMT_DONE;
-                        },
-                        | Character::LowerS => {
+                        }
+                        Character::LowerS => {
                             let mut l: usize = 0;
                             let s: *const i8 = lual_tolstring(state, arg, &mut l);
                             if form[2_usize] as i32 == Character::Null as i32 {
@@ -1247,23 +1326,27 @@ pub unsafe fn str_format(state: *mut State) -> i32 {
                                 }
                             }
                             fmt_action = FMT_DONE;
-                        },
-                        | _ => {
-                            return lual_error(state, c"invalid conversion '%s' to 'format'".as_ptr(), &[form.as_mut_ptr().into()]);
-                        },
+                        }
+                        _ => {
+                            return lual_error(
+                                state,
+                                c"invalid conversion '%s' to 'format'".as_ptr(),
+                                &[form.as_mut_ptr().into()],
+                            );
+                        }
                     }
                     match fmt_action {
-                        | FMT_INTEGER => {
+                        FMT_INTEGER => {
                             let n: i64 = lual_checkinteger(state, arg);
                             checkformat(state, form.as_mut_ptr(), flags, 1);
                             nb = sprintf_int(buffer, maxitem as usize, form.as_mut_ptr(), n);
-                        },
-                        | FMT_FLOAT => {
+                        }
+                        FMT_FLOAT => {
                             let n: f64 = lual_checknumber(state, arg);
                             checkformat(state, form.as_mut_ptr(), c"-+#0 ".as_ptr(), 1);
                             nb = sprintf_float(buffer, maxitem as usize, form.as_mut_ptr(), n);
-                        },
-                        | _ => {},
+                        }
+                        _ => {}
                     }
                     b.buffer_loads
                         .set_length((b.buffer_loads.get_length() as usize + nb as usize) as usize);
@@ -1334,7 +1417,8 @@ pub unsafe fn str_pack(state: *mut State) -> i32 {
                 ntoalign -= 1;
                 (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                 let write_offset = b.buffer_loads.get_length();
-                b.buffer_loads.set_length((b.buffer_loads.get_length() + 1) as usize);
+                b.buffer_loads
+                    .set_length((b.buffer_loads.get_length() + 1) as usize);
                 *(b.buffer_loads.loads_pointer).add(write_offset as usize) = 0_i8;
             }
             arg += 1;
@@ -1342,7 +1426,7 @@ pub unsafe fn str_pack(state: *mut State) -> i32 {
             const PACK_NO_ARG: usize = 1;
             let pack_action: usize;
             match opt {
-                | PackingType::Integer => {
+                PackingType::Integer => {
                     let n: i64 = lual_checkinteger(state, arg);
                     if (size as i32) < size_of::<i64>() as i32 {
                         let lim: i64 = 1 << (size as i32 * 8 - 1);
@@ -1351,10 +1435,16 @@ pub unsafe fn str_pack(state: *mut State) -> i32 {
                             0;
                         }
                     }
-                    packint(&mut b, n as usize, h.is_little_endian(), size as i32, (n < 0) as i32);
+                    packint(
+                        &mut b,
+                        n as usize,
+                        h.is_little_endian(),
+                        size as i32,
+                        (n < 0) as i32,
+                    );
                     pack_action = PACK_DONE;
-                },
-                | PackingType::Unsigned => {
+                }
+                PackingType::Unsigned => {
                     let n: i64 = lual_checkinteger(state, arg);
                     if (size as i32) < size_of::<i64>() as i32 && (n as usize) >= 1_usize << (size as i32 * 8) {
                         lual_argerror(state, arg, c"unsigned overflow".as_ptr());
@@ -1362,8 +1452,8 @@ pub unsafe fn str_pack(state: *mut State) -> i32 {
                     }
                     packint(&mut b, n as usize, h.is_little_endian(), size as i32, 0);
                     pack_action = PACK_DONE;
-                },
-                | PackingType::Float => {
+                }
+                PackingType::Float => {
                     let mut f: f32 = lual_checknumber(state, arg) as f32;
                     let buffer: *mut i8 = b.prepare_with_size(size_of::<f32>());
                     copywithendian(
@@ -1372,10 +1462,11 @@ pub unsafe fn str_pack(state: *mut State) -> i32 {
                         size_of::<f32>() as i32,
                         h.is_little_endian(),
                     );
-                    b.buffer_loads.set_length(b.buffer_loads.get_length() as usize + size);
+                    b.buffer_loads
+                        .set_length(b.buffer_loads.get_length() as usize + size);
                     pack_action = PACK_DONE;
-                },
-                | PackingType::Number => {
+                }
+                PackingType::Number => {
                     let mut f: f64 = lual_checknumber(state, arg);
                     let buffer: *mut i8 = b.prepare_with_size(size_of::<f64>());
                     copywithendian(
@@ -1384,10 +1475,11 @@ pub unsafe fn str_pack(state: *mut State) -> i32 {
                         size_of::<f64>() as i32,
                         h.is_little_endian(),
                     );
-                    b.buffer_loads.set_length(b.buffer_loads.get_length() as usize + size);
+                    b.buffer_loads
+                        .set_length(b.buffer_loads.get_length() as usize + size);
                     pack_action = PACK_DONE;
-                },
-                | PackingType::Double => {
+                }
+                PackingType::Double => {
                     let mut f: f64 = lual_checknumber(state, arg);
                     let buffer: *mut i8 = b.prepare_with_size(size_of::<f64>());
                     copywithendian(
@@ -1396,10 +1488,11 @@ pub unsafe fn str_pack(state: *mut State) -> i32 {
                         size_of::<f64>() as i32,
                         h.is_little_endian(),
                     );
-                    b.buffer_loads.set_length(b.buffer_loads.get_length() as usize + size);
+                    b.buffer_loads
+                        .set_length(b.buffer_loads.get_length() as usize + size);
                     pack_action = PACK_DONE;
-                },
-                | PackingType::Character => {
+                }
+                PackingType::Character => {
                     let mut length: usize = 0;
                     let s: *const i8 = lual_checklstring(state, arg, &mut length);
                     if length > size {
@@ -1415,24 +1508,29 @@ pub unsafe fn str_pack(state: *mut State) -> i32 {
                         }
                         (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                         let write_offset = b.buffer_loads.get_length();
-                        b.buffer_loads.set_length((b.buffer_loads.get_length() + 1) as usize);
+                        b.buffer_loads
+                            .set_length((b.buffer_loads.get_length() + 1) as usize);
                         *(b.buffer_loads.loads_pointer).add(write_offset as usize) = 0_i8;
                     }
                     pack_action = PACK_DONE;
-                },
-                | PackingType::String => {
+                }
+                PackingType::String => {
                     let mut length: usize = 0;
                     let s: *const i8 = lual_checklstring(state, arg, &mut length);
                     if !(size >= size_of::<usize>() || length < 1_usize << ((size as i32) * 8)) {
-                        lual_argerror(state, arg, c"string length does not fit in given size".as_ptr());
+                        lual_argerror(
+                            state,
+                            arg,
+                            c"string length does not fit in given size".as_ptr(),
+                        );
                         0;
                     }
                     packint(&mut b, length, h.is_little_endian(), size as i32, 0);
                     b.add_string_with_length(s, length);
                     totalsize += length;
                     pack_action = PACK_DONE;
-                },
-                | PackingType::ZString => {
+                }
+                PackingType::ZString => {
                     let mut length: usize = 0;
                     let s: *const i8 = lual_checklstring(state, arg, &mut length);
                     if cstr_len(s) != length {
@@ -1442,27 +1540,29 @@ pub unsafe fn str_pack(state: *mut State) -> i32 {
                     b.add_string_with_length(s, length);
                     (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                     let write_offset = b.buffer_loads.get_length();
-                    b.buffer_loads.set_length((b.buffer_loads.get_length() + 1) as usize);
+                    b.buffer_loads
+                        .set_length((b.buffer_loads.get_length() + 1) as usize);
                     *(b.buffer_loads.loads_pointer).add(write_offset as usize) = Character::Null as i8;
                     totalsize += length + 1;
                     pack_action = PACK_DONE;
-                },
-                | PackingType::Padding => {
+                }
+                PackingType::Padding => {
                     (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                     let write_offset = b.buffer_loads.get_length();
-                    b.buffer_loads.set_length((b.buffer_loads.get_length() + 1) as usize);
+                    b.buffer_loads
+                        .set_length((b.buffer_loads.get_length() + 1) as usize);
                     *(b.buffer_loads.loads_pointer).add(write_offset as usize) = 0_i8;
                     pack_action = PACK_NO_ARG;
-                },
-                | PackingType::PaddingAlignment | PackingType::NoOperator => {
+                }
+                PackingType::PaddingAlignment | PackingType::NoOperator => {
                     pack_action = PACK_NO_ARG;
-                },
+                }
             }
             match pack_action {
-                | PACK_NO_ARG => {
+                PACK_NO_ARG => {
                     arg -= 1;
-                },
-                | _ => {},
+                }
+                _ => {}
             }
         }
         b.push_result();
@@ -1497,7 +1597,11 @@ pub unsafe fn unpackint(state: *mut State, str: *const i8, islittle: bool, size:
     unsafe {
         let mut res: u64 = 0;
         let mut i: i32;
-        let limit: i32 = if size <= size_of::<i64>() as i32 { size } else { size_of::<i64>() as i32 };
+        let limit: i32 = if size <= size_of::<i64>() as i32 {
+            size
+        } else {
+            size_of::<i64>() as i32
+        };
         i = limit - 1;
         while i >= 0 {
             res <<= 8;
@@ -1510,10 +1614,18 @@ pub unsafe fn unpackint(state: *mut State, str: *const i8, islittle: bool, size:
                 res = (res ^ mask).wrapping_sub(mask);
             }
         } else if size > size_of::<i64>() as i32 {
-            let fill_mask: i32 = if issigned == 0 || res as i64 >= 0 { 0 } else { (1 << 8) - 1 };
+            let fill_mask: i32 = if issigned == 0 || res as i64 >= 0 {
+                0
+            } else {
+                (1 << 8) - 1
+            };
             for i in limit..size {
                 if *str.add((if islittle { i } else { size - 1 - i }) as usize) as u8 as i32 != fill_mask {
-                    lual_error(state, c"%d-byte integer does not fit into Lua Integer".as_ptr(), &[size.into()]);
+                    lual_error(
+                        state,
+                        c"%d-byte integer does not fit into Lua Integer".as_ptr(),
+                        &[size.into()],
+                    );
                 }
             }
         }
@@ -1544,7 +1656,7 @@ pub unsafe fn str_unpack(state: *mut State) -> i32 {
             lual_checkstack(state, 2, c"too many results".as_ptr());
             n += 1;
             match opt {
-                | PackingType::Integer | PackingType::Unsigned => {
+                PackingType::Integer | PackingType::Unsigned => {
                     let res: i64 = unpackint(
                         state,
                         data.add(position),
@@ -1553,8 +1665,8 @@ pub unsafe fn str_unpack(state: *mut State) -> i32 {
                         (opt == PackingType::Integer) as i32,
                     );
                     (*state).push_integer(res);
-                },
-                | PackingType::Float => {
+                }
+                PackingType::Float => {
                     let mut f: f32 = 0.0;
                     copywithendian(
                         &mut f as *mut f32 as *mut i8,
@@ -1563,8 +1675,8 @@ pub unsafe fn str_unpack(state: *mut State) -> i32 {
                         h.is_little_endian(),
                     );
                     (*state).push_number(f as f64);
-                },
-                | PackingType::Number => {
+                }
+                PackingType::Number => {
                     let mut f: f64 = 0.0;
                     copywithendian(
                         &mut f as *mut f64 as *mut i8,
@@ -1573,8 +1685,8 @@ pub unsafe fn str_unpack(state: *mut State) -> i32 {
                         h.is_little_endian(),
                     );
                     (*state).push_number(f);
-                },
-                | PackingType::Double => {
+                }
+                PackingType::Double => {
                     let mut f: f64 = 0.0;
                     copywithendian(
                         &mut f as *mut f64 as *mut i8,
@@ -1583,20 +1695,26 @@ pub unsafe fn str_unpack(state: *mut State) -> i32 {
                         h.is_little_endian(),
                     );
                     (*state).push_number(f);
-                },
-                | PackingType::Character => {
+                }
+                PackingType::Character => {
                     lua_pushlstring(state, data.add(position), size);
-                },
-                | PackingType::String => {
-                    let length: usize = unpackint(state, data.add(position), h.is_little_endian(), size as i32, 0) as usize;
+                }
+                PackingType::String => {
+                    let length: usize = unpackint(
+                        state,
+                        data.add(position),
+                        h.is_little_endian(),
+                        size as i32,
+                        0,
+                    ) as usize;
                     if length > ld - position - size {
                         lual_argerror(state, 2, c"data string too short".as_ptr());
                         0;
                     }
                     lua_pushlstring(state, data.add(position).add(size), length);
                     position += length;
-                },
-                | PackingType::ZString => {
+                }
+                PackingType::ZString => {
                     let length: usize = cstr_len(data.add(position));
                     if position + length >= ld {
                         lual_argerror(state, 2, c"unfinished string for format 'zio'".as_ptr());
@@ -1604,10 +1722,10 @@ pub unsafe fn str_unpack(state: *mut State) -> i32 {
                     }
                     lua_pushlstring(state, data.add(position), length);
                     position += length + 1;
-                },
-                | PackingType::PaddingAlignment | PackingType::Padding | PackingType::NoOperator => {
+                }
+                PackingType::PaddingAlignment | PackingType::Padding | PackingType::NoOperator => {
                     n -= 1;
-                },
+                }
             }
             position += size;
         }
@@ -1724,7 +1842,12 @@ pub const STRING_FUNCTIONS: [RegisteredFunction; 17] = {
 pub unsafe fn createmetatable(state: *mut State) {
     unsafe {
         (*state).lua_createtable();
-        lual_setfuncs(state, STRING_METAMETHODS.as_ptr(), STRING_METAMETHODS.len(), 0);
+        lual_setfuncs(
+            state,
+            STRING_METAMETHODS.as_ptr(),
+            STRING_METAMETHODS.len(),
+            0,
+        );
         lua_pushstring(state, c"".as_ptr());
         lua_pushvalue(state, -2);
         lua_setmetatable(state, -2);

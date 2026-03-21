@@ -72,8 +72,8 @@ const OSC_TITLE: &[u8] = b"\x1b]0;";
 
 // ─── Terminal state ───────────────────────────────────────────────────────────
 
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 
 static SAVED_TERMIOS: Mutex<Option<Termios>> = Mutex::new(None);
 static IN_RAW_MODE: AtomicBool = AtomicBool::new(false);
@@ -107,14 +107,22 @@ fn write_stdout(data: &[u8]) {
 // Read one byte with a timeout in ms.  -1 = block forever, 0 = non-blocking.
 unsafe fn read_byte(timeout_ms: i32) -> Option<u8> {
     unsafe {
-        let mut pfd = Pollfd { fd: STDIN_FILENO, events: POLLIN, revents: 0 };
+        let mut pfd = Pollfd {
+            fd: STDIN_FILENO,
+            events: POLLIN,
+            revents: 0,
+        };
         let r = poll(&mut pfd, 1, timeout_ms);
         if r <= 0 {
             return None;
         }
         let mut b: u8 = 0;
         let n = read(STDIN_FILENO, &mut b, 1);
-        if n == 1 { Some(b) } else { None }
+        if n == 1 {
+            Some(b)
+        } else {
+            None
+        }
     }
 }
 
@@ -132,24 +140,24 @@ fn decode_csi(params: &[u8], final_byte: u8) -> Vec<u8> {
     let shifted = (modifier.saturating_sub(1) & 1) != 0;
 
     match final_byte {
-        | b'A' if shifted => b"shift-up".to_vec(),
-        | b'B' if shifted => b"shift-down".to_vec(),
-        | b'C' if shifted => b"shift-right".to_vec(),
-        | b'D' if shifted => b"shift-left".to_vec(),
-        | b'A' => b"up".to_vec(),
-        | b'B' => b"down".to_vec(),
-        | b'C' => b"right".to_vec(),
-        | b'D' => b"left".to_vec(),
-        | b'E' => b"down".to_vec(), // cursor next N lines
-        | b'F' => b"end".to_vec(),
-        | b'G' => b"home".to_vec(),
-        | b'H' => b"home".to_vec(),
-        | b'P' => b"f1".to_vec(),
-        | b'Q' => b"f2".to_vec(),
-        | b'R' => b"f3".to_vec(),
-        | b'S' => b"f4".to_vec(),
-        | b'Z' => b"shift-tab".to_vec(),
-        | b'~' => {
+        b'A' if shifted => b"shift-up".to_vec(),
+        b'B' if shifted => b"shift-down".to_vec(),
+        b'C' if shifted => b"shift-right".to_vec(),
+        b'D' if shifted => b"shift-left".to_vec(),
+        b'A' => b"up".to_vec(),
+        b'B' => b"down".to_vec(),
+        b'C' => b"right".to_vec(),
+        b'D' => b"left".to_vec(),
+        b'E' => b"down".to_vec(), // cursor next N lines
+        b'F' => b"end".to_vec(),
+        b'G' => b"home".to_vec(),
+        b'H' => b"home".to_vec(),
+        b'P' => b"f1".to_vec(),
+        b'Q' => b"f2".to_vec(),
+        b'R' => b"f3".to_vec(),
+        b'S' => b"f4".to_vec(),
+        b'Z' => b"shift-tab".to_vec(),
+        b'~' => {
             // First numeric parameter selects the key
             let n: u32 = std::str::from_utf8(params)
                 .unwrap_or("")
@@ -159,38 +167,38 @@ fn decode_csi(params: &[u8], final_byte: u8) -> Vec<u8> {
                 .parse()
                 .unwrap_or(0);
             match n {
-                | 1 | 7 => b"home".to_vec(),
-                | 2 => b"ins".to_vec(),
-                | 3 => b"del".to_vec(),
-                | 4 | 8 => b"end".to_vec(),
-                | 5 => b"pgup".to_vec(),
-                | 6 => b"pgdn".to_vec(),
-                | 11 => b"f1".to_vec(),
-                | 12 => b"f2".to_vec(),
-                | 13 => b"f3".to_vec(),
-                | 14 => b"f4".to_vec(),
-                | 15 => b"f5".to_vec(),
-                | 17 => b"f6".to_vec(),
-                | 18 => b"f7".to_vec(),
-                | 19 => b"f8".to_vec(),
-                | 20 => b"f9".to_vec(),
-                | 21 => b"f10".to_vec(),
-                | 23 => b"f11".to_vec(),
-                | 24 => b"f12".to_vec(),
-                | _ => {
+                1 | 7 => b"home".to_vec(),
+                2 => b"ins".to_vec(),
+                3 => b"del".to_vec(),
+                4 | 8 => b"end".to_vec(),
+                5 => b"pgup".to_vec(),
+                6 => b"pgdn".to_vec(),
+                11 => b"f1".to_vec(),
+                12 => b"f2".to_vec(),
+                13 => b"f3".to_vec(),
+                14 => b"f4".to_vec(),
+                15 => b"f5".to_vec(),
+                17 => b"f6".to_vec(),
+                18 => b"f7".to_vec(),
+                19 => b"f8".to_vec(),
+                20 => b"f9".to_vec(),
+                21 => b"f10".to_vec(),
+                23 => b"f11".to_vec(),
+                24 => b"f12".to_vec(),
+                _ => {
                     let mut s = b"esc-[".to_vec();
                     s.extend_from_slice(params);
                     s.push(final_byte);
                     s
-                },
+                }
             }
-        },
-        | _ => {
+        }
+        _ => {
             let mut s = b"esc-[".to_vec();
             s.extend_from_slice(params);
             s.push(final_byte);
             s
-        },
+        }
     }
 }
 
@@ -199,13 +207,13 @@ unsafe fn parse_csi() -> Vec<u8> {
         let mut params: Vec<u8> = Vec::new();
         loop {
             match read_byte(50) {
-                | None => return b"esc".to_vec(),
-                | Some(b) if (0x40..=0x7E).contains(&b) => {
+                None => return b"esc".to_vec(),
+                Some(b) if (0x40..=0x7E).contains(&b) => {
                     return decode_csi(&params, b);
-                },
-                | Some(b) => {
+                }
+                Some(b) => {
                     params.push(b);
-                },
+                }
             }
         }
     }
@@ -214,24 +222,24 @@ unsafe fn parse_csi() -> Vec<u8> {
 unsafe fn parse_ss3() -> Vec<u8> {
     unsafe {
         match read_byte(50) {
-            | Some(b'A') => b"up".to_vec(),
-            | Some(b'B') => b"down".to_vec(),
-            | Some(b'C') => b"right".to_vec(),
-            | Some(b'D') => b"left".to_vec(),
-            | Some(b'H') => b"home".to_vec(),
-            | Some(b'F') => b"end".to_vec(),
-            | Some(b'P') => b"f1".to_vec(),
-            | Some(b'Q') => b"f2".to_vec(),
-            | Some(b'R') => b"f3".to_vec(),
-            | Some(b'S') => b"f4".to_vec(),
-            | Some(b) => {
+            Some(b'A') => b"up".to_vec(),
+            Some(b'B') => b"down".to_vec(),
+            Some(b'C') => b"right".to_vec(),
+            Some(b'D') => b"left".to_vec(),
+            Some(b'H') => b"home".to_vec(),
+            Some(b'F') => b"end".to_vec(),
+            Some(b'P') => b"f1".to_vec(),
+            Some(b'Q') => b"f2".to_vec(),
+            Some(b'R') => b"f3".to_vec(),
+            Some(b'S') => b"f4".to_vec(),
+            Some(b) => {
                 let mut s = b"alt-".to_vec();
                 if (0x20..0x7F).contains(&b) {
                     s.push(b);
                 }
                 s
-            },
-            | None => b"esc".to_vec(),
+            }
+            None => b"esc".to_vec(),
         }
     }
 }
@@ -243,8 +251,8 @@ unsafe fn read_utf8_tail(first: u8, n_extra: usize) -> Vec<u8> {
         let mut buf = vec![first];
         for _ in 0..n_extra {
             match read_byte(20) {
-                | Some(b) => buf.push(b),
-                | None => break,
+                Some(b) => buf.push(b),
+                None => break,
             }
         }
         buf
@@ -255,43 +263,43 @@ unsafe fn parse_key(timeout_ms: i32) -> Option<Vec<u8>> {
     unsafe {
         let b = read_byte(timeout_ms)?;
         Some(match b {
-            | 0 => b"ctrl-space".to_vec(),
-            | 8 => b"backspace".to_vec(),
-            | 9 => b"tab".to_vec(),
-            | 10 => b"enter".to_vec(),
-            | 13 => b"enter".to_vec(),
-            | 27 => {
+            0 => b"ctrl-space".to_vec(),
+            8 => b"backspace".to_vec(),
+            9 => b"tab".to_vec(),
+            10 => b"enter".to_vec(),
+            13 => b"enter".to_vec(),
+            27 => {
                 // ESC — try to parse an escape sequence
                 match read_byte(50) {
-                    | None => b"esc".to_vec(),
-                    | Some(b'[') => parse_csi(),
-                    | Some(b'O') => parse_ss3(),
-                    | Some(x) if (0x20..0x7F).contains(&x) => {
+                    None => b"esc".to_vec(),
+                    Some(b'[') => parse_csi(),
+                    Some(b'O') => parse_ss3(),
+                    Some(x) if (0x20..0x7F).contains(&x) => {
                         let mut s = b"alt-".to_vec();
                         s.push(x);
                         s
-                    },
-                    | Some(_) => b"esc".to_vec(),
+                    }
+                    Some(_) => b"esc".to_vec(),
                 }
-            },
-            | 127 => b"backspace".to_vec(),
-            | 1..=26 => {
+            }
+            127 => b"backspace".to_vec(),
+            1..=26 => {
                 // Ctrl-A (1) through Ctrl-Z (26)
                 let letter = b'a' + b - 1;
                 let mut s = b"ctrl-".to_vec();
                 s.push(letter);
                 s
-            },
-            | 28 => b"ctrl-\\".to_vec(),
-            | 29 => b"ctrl-]".to_vec(),
-            | 30 => b"ctrl-^".to_vec(),
-            | 31 => b"ctrl-_".to_vec(),
-            | 0x20..=0x7E => vec![b],
+            }
+            28 => b"ctrl-\\".to_vec(),
+            29 => b"ctrl-]".to_vec(),
+            30 => b"ctrl-^".to_vec(),
+            31 => b"ctrl-_".to_vec(),
+            0x20..=0x7E => vec![b],
             // UTF-8 multi-byte characters
-            | 0xC0..=0xDF => read_utf8_tail(b, 1),
-            | 0xE0..=0xEF => read_utf8_tail(b, 2),
-            | 0xF0..=0xF7 => read_utf8_tail(b, 3),
-            | _ => vec![b],
+            0xC0..=0xDF => read_utf8_tail(b, 1),
+            0xE0..=0xEF => read_utf8_tail(b, 2),
+            0xF0..=0xF7 => read_utf8_tail(b, 3),
+            _ => vec![b],
         })
     }
 }
@@ -330,12 +338,20 @@ fn color_escape(fg: i32, bg: i32, attrs: i32) -> Vec<u8> {
     } // reverse
 
     if fg >= 0 {
-        let s = if fg < 8 { format!("{}", 30 + fg) } else { format!("{}", 90 + (fg - 8)) };
+        let s = if fg < 8 {
+            format!("{}", 30 + fg)
+        } else {
+            format!("{}", 90 + (fg - 8))
+        };
         push_code(&s);
     }
 
     if bg >= 0 {
-        let s = if bg < 8 { format!("{}", 40 + bg) } else { format!("{}", 100 + (bg - 8)) };
+        let s = if bg < 8 {
+            format!("{}", 40 + bg)
+        } else {
+            format!("{}", 100 + (bg - 8))
+        };
         push_code(&s);
     }
 
@@ -446,9 +462,21 @@ pub unsafe fn tui_print_at(state: *mut State) -> i32 {
         write_stdout(move_esc.as_bytes());
 
         if colorise {
-            let fg = if has_fg { lua_tointegerx(state, 4, null_mut()) as i32 } else { -1 };
-            let bg = if has_bg { lua_tointegerx(state, 5, null_mut()) as i32 } else { -1 };
-            let attrs = if has_attrs { lua_tointegerx(state, 6, null_mut()) as i32 } else { 0 };
+            let fg = if has_fg {
+                lua_tointegerx(state, 4, null_mut()) as i32
+            } else {
+                -1
+            };
+            let bg = if has_bg {
+                lua_tointegerx(state, 5, null_mut()) as i32
+            } else {
+                -1
+            };
+            let attrs = if has_attrs {
+                lua_tointegerx(state, 6, null_mut()) as i32
+            } else {
+                0
+            };
             write_stdout(&color_escape(fg, bg, attrs));
         }
 
@@ -582,14 +610,14 @@ pub unsafe fn tui_read_key(state: *mut State) -> i32 {
         };
 
         match parse_key(timeout_ms) {
-            | None => {
+            None => {
                 (*state).push_nil();
                 1
-            },
-            | Some(key) => {
+            }
+            Some(key) => {
                 lua_pushlstring(state, key.as_ptr() as *const i8, key.len());
                 1
-            },
+            }
         }
     }
 }
@@ -733,7 +761,11 @@ pub unsafe fn luaopen_tui(state: *mut State) -> i32 {
         lual_setfuncs(state, TUI_FUNCTIONS.as_ptr(), TUI_FUNCTIONS.len(), 0);
 
         // Also expose set_title (not in the const array due to count flexibility)
-        lua_pushcclosure(state, Some(tui_set_title as unsafe fn(*mut State) -> i32), 0);
+        lua_pushcclosure(
+            state,
+            Some(tui_set_title as unsafe fn(*mut State) -> i32),
+            0,
+        );
         lua_setfield(state, -2, c"set_title".as_ptr());
 
         // ── Colour constants ──────────────────────────────────────────────────

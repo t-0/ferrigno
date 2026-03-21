@@ -76,7 +76,11 @@ impl TObject for Object {
 }
 impl Object {
     pub fn new(tagvariant: TagVariant) -> Self {
-        Self { object_next: null_mut(), object_tagvariant: tagvariant, object_marked: 0 }
+        Self {
+            object_next: null_mut(),
+            object_tagvariant: tagvariant,
+            object_marked: 0,
+        }
     }
     pub unsafe fn iscleared(global: *mut Global, object: *const Object) -> i32 {
         unsafe {
@@ -125,11 +129,11 @@ impl Object {
             const LINK_TO_GRAY: usize = 1;
             let mark_action: usize;
             match (*object).get_tagvariant() {
-                | TagVariant::StringShort | TagVariant::StringLong => {
+                TagVariant::StringShort | TagVariant::StringLong => {
                     (*object).set_marked((*object).get_marked() & !WHITEBITS | BLACKBIT);
                     mark_action = MARK_DONE;
-                },
-                | TagVariant::UpValue => {
+                }
+                TagVariant::UpValue => {
                     let uv: *mut UpValue = object as *mut UpValue;
                     if (*uv).upvalue_v.upvaluea_p != std::ptr::addr_of_mut!((*uv).upvalue_u.upvalueb_value) {
                         (*uv).set_marked((*uv).get_marked() & !(BLACKBIT | WHITEBITS));
@@ -142,8 +146,8 @@ impl Object {
                         Object::really_mark_object(global, obj);
                     }
                     mark_action = MARK_DONE;
-                },
-                | TagVariant::User => {
+                }
+                TagVariant::User => {
                     let user: *mut User = object as *mut User;
                     if (*user).user_countupvalues == 0 {
                         if !((*user).get_metatable()).is_null() && (*(*user).get_metatable()).get_marked() & WHITEBITS != 0 {
@@ -154,23 +158,23 @@ impl Object {
                     } else {
                         mark_action = LINK_TO_GRAY;
                     }
-                },
-                | TagVariant::ClosureL | TagVariant::ClosureC | TagVariant::Table | TagVariant::State | TagVariant::Prototype => {
+                }
+                TagVariant::ClosureL | TagVariant::ClosureC | TagVariant::Table | TagVariant::State | TagVariant::Prototype => {
                     mark_action = LINK_TO_GRAY;
-                },
-                | _ => {
+                }
+                _ => {
                     mark_action = MARK_DONE;
-                },
+                }
             }
             match mark_action {
-                | LINK_TO_GRAY => {
+                LINK_TO_GRAY => {
                     ObjectWithGCList::linkgclist_(
                         object as *mut ObjectWithGCList,
                         (*(object as *mut ObjectWithGCList)).getgclist(),
                         &mut (*global).global_gray,
                     );
-                },
-                | _ => {},
+                }
+                _ => {}
             };
         }
     }
@@ -190,7 +194,7 @@ impl Object {
     pub unsafe fn objsize(object: *mut Object) -> i64 {
         unsafe {
             match (*object).get_tagvariant() {
-                | TagVariant::Table => {
+                TagVariant::Table => {
                     let t = object as *mut Table;
                     let mut s = size_of::<Table>() as i64;
                     s += concretesize((*t).table_a_size) as i64;
@@ -198,62 +202,62 @@ impl Object {
                         s += ((1i64 << (*t).table_log_size_node as i32) * size_of::<Node>() as i64) as i64;
                     }
                     s
-                },
-                | TagVariant::ClosureL => {
+                }
+                TagVariant::ClosureL => {
                     let cl = object as *mut Closure;
                     (size_of::<Closure>() + (*cl).closure_count_upvalues as usize * size_of::<*mut UpValue>()) as i64
-                },
-                | TagVariant::ClosureC => {
+                }
+                TagVariant::ClosureC => {
                     let cl = object as *mut Closure;
                     (size_of::<Closure>() + (*cl).closure_count_upvalues as usize * size_of::<TValue>()) as i64
-                },
-                | TagVariant::User => {
+                }
+                TagVariant::User => {
                     let u = object as *mut User;
                     (size_of::<User>() + (*u).user_countbytes) as i64
-                },
-                | TagVariant::State => size_of::<State>() as i64,
-                | TagVariant::Prototype => size_of::<Prototype>() as i64,
-                | TagVariant::StringShort | TagVariant::StringLong => {
+                }
+                TagVariant::State => size_of::<State>() as i64,
+                TagVariant::Prototype => size_of::<Prototype>() as i64,
+                TagVariant::StringShort | TagVariant::StringLong => {
                     let ts = object as *mut TString;
                     (size_of::<TString>() + (*ts).get_length() + 1) as i64
-                },
-                | TagVariant::UpValue => size_of::<UpValue>() as i64,
-                | _ => size_of::<Object>() as i64,
+                }
+                TagVariant::UpValue => size_of::<UpValue>() as i64,
+                _ => size_of::<Object>() as i64,
             }
         }
     }
     pub unsafe fn object_free(state: *mut State, object: *mut Object) {
         unsafe {
             match (*object).get_tagvariant() {
-                | TagVariant::Prototype => {
+                TagVariant::Prototype => {
                     let prototype: *mut Prototype = object as *mut Prototype;
                     (*prototype).prototype_free(state);
-                },
-                | TagVariant::UpValue => {
+                }
+                TagVariant::UpValue => {
                     let upvalue: *mut UpValue = object as *mut UpValue;
                     (*upvalue).upvalue_free(state);
-                },
-                | TagVariant::ClosureL | TagVariant::ClosureC => {
+                }
+                TagVariant::ClosureL | TagVariant::ClosureC => {
                     let closure: *mut Closure = object as *mut Closure;
                     (*closure).closure_free(state);
-                },
-                | TagVariant::Table => {
+                }
+                TagVariant::Table => {
                     let table: *mut Table = object as *mut Table;
                     (*table).table_free(state);
-                },
-                | TagVariant::State => {
+                }
+                TagVariant::State => {
                     let other: *mut State = object as *mut State;
                     (*other).interpreter_free(state);
-                },
-                | TagVariant::User => {
+                }
+                TagVariant::User => {
                     let user: *mut User = object as *mut User;
                     (*user).user_free(state);
-                },
-                | TagVariant::StringLong | TagVariant::StringShort => {
+                }
+                TagVariant::StringLong | TagVariant::StringShort => {
                     let tstring: *mut TString = object as *mut TString;
                     (*tstring).tstring_free(state);
-                },
-                | _ => {},
+                }
+                _ => {}
             };
         }
     }

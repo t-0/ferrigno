@@ -47,8 +47,8 @@ impl TObject for TString {
 impl TString {
     pub fn is_unhashed(&self) -> bool {
         match self.tstring_extra {
-            | TStringExtra::Long { hashed } => !hashed,
-            | _ => false,
+            TStringExtra::Long { hashed } => !hashed,
+            _ => false,
         }
     }
     pub fn set_hashed(&mut self) {
@@ -70,16 +70,16 @@ impl TString {
     pub unsafe fn somefunction(&self) -> i32 {
         if self.get_tagvariant() == TagVariant::StringShort {
             match self.tstring_extra {
-                | TStringExtra::Short { extra: x } => {
+                TStringExtra::Short { extra: x } => {
                     if 0 == x {
                         return Token::Name as i32;
                     } else {
                         return x as i32 - 1 + FIRST_RESERVED;
                     }
-                },
-                | _ => {
+                }
+                _ => {
                     return Token::Name as i32;
-                },
+                }
             }
         }
         Token::Name as i32
@@ -156,7 +156,11 @@ impl TString {
         }
     }
     pub unsafe fn create_external(
-        state: *mut State, s: *const i8, length: usize, allocation_function: AllocationFunction, user_data: *mut std::ffi::c_void,
+        state: *mut State,
+        s: *const i8,
+        length: usize,
+        allocation_function: AllocationFunction,
+        user_data: *mut std::ffi::c_void,
     ) -> *mut TString {
         unsafe {
             let total_size = core::mem::size_of::<TString>();
@@ -204,7 +208,11 @@ impl TString {
             }
             tstring = createstrobj(state, length, TagVariant::StringShort, h);
             (*tstring).tstring_length = length;
-            std::ptr::copy_nonoverlapping(str as *const u8, (*tstring).get_contents() as *mut u8, length);
+            std::ptr::copy_nonoverlapping(
+                str as *const u8,
+                (*tstring).get_contents() as *mut u8,
+                length,
+            );
             (*tstring).tstring_hash_next = *list;
             *list = tstring;
             (*tb).stringtable_length += 1;
@@ -232,7 +240,12 @@ impl TString {
                     key.set_object(ts_mut as *mut Object, (*tstring).get_tagvariant());
                     let mut value = TValue::new(TagVariant::NilNil);
                     value.set_integer(dump_state.dumpstate_count_string as i64);
-                    crate::table::luah_set(dump_state.state(), dump_state.dumpstate_table, &key, &mut value);
+                    crate::table::luah_set(
+                        dump_state.state(),
+                        dump_state.dumpstate_table,
+                        &key,
+                        &mut value,
+                    );
                 }
             };
         }
@@ -298,11 +311,21 @@ pub unsafe fn luas_newlstr(state: *mut State, str: *const i8, length: usize) -> 
         if length <= TSTRING_SHORT_MAX {
             TString::intern(state, str, length)
         } else {
-            if length >= (if (size_of::<usize>()) < size_of::<i64>() { !(0usize) } else { MAXIMUM_SIZE }) - size_of::<TString>() {
+            if length
+                >= (if (size_of::<usize>()) < size_of::<i64>() {
+                    !(0usize)
+                } else {
+                    MAXIMUM_SIZE
+                }) - size_of::<TString>()
+            {
                 (*state).too_big();
             }
             let tstring: *mut TString = TString::create_long(state, length);
-            std::ptr::copy_nonoverlapping(str as *const u8, (*tstring).get_contents_mut() as *mut u8, length);
+            std::ptr::copy_nonoverlapping(
+                str as *const u8,
+                (*tstring).get_contents_mut() as *mut u8,
+                length,
+            );
             tstring
         }
     }
@@ -375,7 +398,11 @@ pub unsafe fn copy2buff(top: *mut TValue, mut n: i32, buffer: *mut i8) {
         loop {
             let tstring: *mut TString = (*top.sub(n as usize)).as_string().unwrap();
             let length = (*tstring).get_length();
-            std::ptr::copy_nonoverlapping((*tstring).get_contents_mut() as *const u8, buffer.add(tl) as *mut u8, length);
+            std::ptr::copy_nonoverlapping(
+                (*tstring).get_contents_mut() as *const u8,
+                buffer.add(tl) as *mut u8,
+                length,
+            );
             tl = tl.wrapping_add(length);
             n -= 1;
             if n <= 0 {
@@ -423,15 +450,25 @@ pub unsafe fn concatenate(state: *mut State, mut total: i32) {
                 let tstring: *mut TString;
                 n = 1;
                 while n < total
-                    && ((*top.sub(n as usize).sub(1)).get_tagvariant().to_tag_type().is_string()
-                        || (*top.sub(n as usize).sub(1)).get_tagvariant().to_tag_type().is_numeric() && {
-                            (*top.sub(n as usize).sub(1)).from_interpreter_to_string(state);
-                            1 != 0
-                        })
+                    && ((*top.sub(n as usize).sub(1))
+                        .get_tagvariant()
+                        .to_tag_type()
+                        .is_string()
+                        || (*top.sub(n as usize).sub(1))
+                            .get_tagvariant()
+                            .to_tag_type()
+                            .is_numeric()
+                            && {
+                                (*top.sub(n as usize).sub(1)).from_interpreter_to_string(state);
+                                1 != 0
+                            })
                 {
                     let l = (*(*top.sub(n as usize).sub(1)).as_string().unwrap()).get_length();
-                    if l >= (if (size_of::<usize>()) < size_of::<i64>() { !(0usize) } else { MAXIMUM_SIZE })
-                        - size_of::<TString>()
+                    if l >= (if (size_of::<usize>()) < size_of::<i64>() {
+                        !(0usize)
+                    } else {
+                        MAXIMUM_SIZE
+                    }) - size_of::<TString>()
                         - tl
                     {
                         (*state).interpreter_top.stkidrel_pointer = top.sub(total as usize);
@@ -452,7 +489,10 @@ pub unsafe fn concatenate(state: *mut State, mut total: i32) {
                 (*io).set_object(tstring as *mut Object, (*tstring).get_tagvariant());
             }
             total -= n - 1;
-            (*state).interpreter_top.stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer.sub((n - 1) as usize);
+            (*state).interpreter_top.stkidrel_pointer = (*state)
+                .interpreter_top
+                .stkidrel_pointer
+                .sub((n - 1) as usize);
             if total <= 1 {
                 break;
             }

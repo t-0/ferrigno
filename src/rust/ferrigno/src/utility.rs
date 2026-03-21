@@ -4,12 +4,12 @@ use crate::functionstate::LUA_IDSIZE;
 /// The sign and "0x" should already be stripped.
 fn parse_hex_float_value(s: &str) -> f64 {
     let (mantissa_str, exp_str) = match s.find(['p', 'P']) {
-        | Some(p) => (&s[..p], &s[p + 1..]),
-        | None => (s, "0"),
+        Some(p) => (&s[..p], &s[p + 1..]),
+        None => (s, "0"),
     };
     let (int_str, frac_str) = match mantissa_str.find('.') {
-        | Some(d) => (&mantissa_str[..d], &mantissa_str[d + 1..]),
-        | None => (mantissa_str, ""),
+        Some(d) => (&mantissa_str[..d], &mantissa_str[d + 1..]),
+        None => (mantissa_str, ""),
     };
     let explicit_exp: i64 = exp_str.parse().unwrap_or(0);
     // Accumulate up to 15 significant hex digits (60 bits > 53-bit mantissa).
@@ -127,7 +127,11 @@ unsafe fn rust_strtod(s: *const i8, endptr: *mut *mut i8) -> f64 {
                     p = p.add(3);
                 }
                 *endptr = p as *mut i8;
-                if neg { f64::NEG_INFINITY } else { f64::INFINITY }
+                if neg {
+                    f64::NEG_INFINITY
+                } else {
+                    f64::INFINITY
+                }
             } else {
                 *endptr = s as *mut i8;
                 0.0
@@ -267,8 +271,8 @@ pub unsafe fn mem_chr(s: *const u8, c: u8, n: usize) -> *const u8 {
     unsafe {
         let slice = std::slice::from_raw_parts(s, n);
         match slice.iter().position(|&b| b == c) {
-            | Some(i) => s.add(i),
-            | None => null(),
+            Some(i) => s.add(i),
+            None => null(),
         }
     }
 }
@@ -306,14 +310,14 @@ pub unsafe fn os_getenv(name: *const i8) -> *const i8 {
         use std::os::unix::ffi::OsStrExt;
         let key = std::ffi::OsStr::from_bytes(cname.to_bytes());
         match std::env::var_os(key) {
-            | Some(val) => BUF.with(|buf| {
+            Some(val) => BUF.with(|buf| {
                 let mut buf = buf.borrow_mut();
                 buf.clear();
                 buf.extend_from_slice(val.as_encoded_bytes());
                 buf.push(0);
                 buf.as_ptr() as *const i8
             }),
-            | None => null(),
+            None => null(),
         }
     }
 }
@@ -341,7 +345,11 @@ pub unsafe fn snprintf_pointer(buf: *mut i8, size: usize, p: *const std::ffi::c_
     }
 }
 pub fn ceiling_log2(input: usize) -> usize {
-    if input <= 1 { 0 } else { (input - 1).ilog2() as usize + 1 }
+    if input <= 1 {
+        0
+    } else {
+        (input - 1).ilog2() as usize + 1
+    }
 }
 pub unsafe fn is_negative(s: *mut *const i8) -> bool {
     unsafe {
@@ -366,7 +374,11 @@ pub unsafe fn l_str2dloc(s: *const i8, result: *mut f64, _mode: i32) -> *const i
         while Character::from(*endptr as i32).is_whitespace() {
             endptr = endptr.add(1);
         }
-        if *endptr as i32 == Character::Null as i32 { endptr } else { null_mut() }
+        if *endptr as i32 == Character::Null as i32 {
+            endptr
+        } else {
+            null_mut()
+        }
     }
 }
 pub unsafe fn l_str2d(s: *const i8, result: *mut f64) -> *const i8 {
@@ -447,7 +459,11 @@ pub unsafe fn l_str2int(mut s: *const i8, result: *mut i64) -> *const i8 {
         if empty != 0 || *s as i32 != Character::Null as i32 {
             null()
         } else {
-            *result = (if is_negative_ { (0usize).wrapping_sub(a) } else { a }) as i64;
+            *result = (if is_negative_ {
+                (0usize).wrapping_sub(a)
+            } else {
+                a
+            }) as i64;
             s
         }
     }
@@ -527,7 +543,11 @@ pub fn ldexp_(x: f64, exp: i32) -> f64 {
         let exponent = ((bits >> 52) & 0x7ff) as i32;
         let new_exponent = exponent + exp;
         if !(0..=0x7ff).contains(&new_exponent) {
-            if (bits >> 63) != 0 { f64::NEG_INFINITY } else { f64::INFINITY }
+            if (bits >> 63) != 0 {
+                f64::NEG_INFINITY
+            } else {
+                f64::INFINITY
+            }
         } else {
             let result_bits = (bits & 0x800fffffffffffff) | ((new_exponent as u64) << 52);
             f64::from_bits(result_bits)
@@ -586,7 +606,10 @@ pub fn format_float_g(f: f64, sig_digits: usize, out: &mut [u8]) -> usize {
         if mant_end > 0 && out[mant_end - 1] == b'.' {
             mant_end -= 1;
         }
-        let exp_val: i32 = std::str::from_utf8(&out[e_pos + 1..n]).unwrap_or("0").parse().unwrap_or(0);
+        let exp_val: i32 = std::str::from_utf8(&out[e_pos + 1..n])
+            .unwrap_or("0")
+            .parse()
+            .unwrap_or(0);
         let exp_n = {
             let mut pos: &mut [u8] = &mut out[mant_end..];
             if exp_val >= 0 {

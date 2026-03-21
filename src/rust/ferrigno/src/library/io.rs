@@ -49,25 +49,25 @@ fn open_opts_from_mode(mode: &[u8]) -> Option<OpenOptions> {
     let plus = mode.contains(&b'+');
     let mut opts = OpenOptions::new();
     match base {
-        | b'r' => {
+        b'r' => {
             opts.read(true);
             if plus {
                 opts.write(true);
             }
-        },
-        | b'w' => {
+        }
+        b'w' => {
             opts.write(true).create(true).truncate(true);
             if plus {
                 opts.read(true);
             }
-        },
-        | b'a' => {
+        }
+        b'a' => {
             opts.append(true).create(true);
             if plus {
                 opts.read(true);
             }
-        },
-        | _ => return None,
+        }
+        _ => return None,
     }
     Some(opts)
 }
@@ -78,17 +78,17 @@ fn open_opts_from_mode(mode: &[u8]) -> Option<OpenOptions> {
 unsafe fn handle_write_bytes(handle: *mut IoHandle, data: &[u8]) -> bool {
     unsafe {
         match &mut *handle {
-            | IoHandle::File(fh) => fh.write_buffered(data),
-            | IoHandle::Pipe(ph) => {
+            IoHandle::File(fh) => fh.write_buffered(data),
+            IoHandle::Pipe(ph) => {
                 if let Some(ref mut writer) = ph.pipe_writer {
                     writer.write_all(data).is_ok()
                 } else {
                     false
                 }
-            },
-            | IoHandle::Stdout => std::io::stdout().write_all(data).is_ok(),
-            | IoHandle::Stderr => std::io::stderr().write_all(data).is_ok(),
-            | IoHandle::Stdin { .. } => false,
+            }
+            IoHandle::Stdout => std::io::stdout().write_all(data).is_ok(),
+            IoHandle::Stderr => std::io::stderr().write_all(data).is_ok(),
+            IoHandle::Stdin { .. } => false,
         }
     }
 }
@@ -119,40 +119,42 @@ unsafe fn handle_write_float(handle: *mut IoHandle, f: f64) -> bool {
 unsafe fn handle_read_all(handle: *mut IoHandle) -> Vec<u8> {
     unsafe {
         match &mut *handle {
-            | IoHandle::File(fh) => {
+            IoHandle::File(fh) => {
                 let mut buf = Vec::new();
                 if let Some(b) = fh.filehandle_pushback.take() {
                     buf.push(b);
                 }
                 let _ = fh.filehandle_file.read_to_end(&mut buf);
                 buf
-            },
-            | IoHandle::Pipe(ph) => {
+            }
+            IoHandle::Pipe(ph) => {
                 let mut buf = Vec::new();
                 if let Some(ref mut reader) = ph.pipe_reader {
                     let mut chunk = [0u8; IO_BUFFERSIZE];
                     loop {
                         match reader.read(&mut chunk) {
-                            | Ok(0) => break,
-                            | Ok(n) => buf.extend_from_slice(&chunk[..n]),
-                            | Err(_) => {
+                            Ok(0) => break,
+                            Ok(n) => buf.extend_from_slice(&chunk[..n]),
+                            Err(_) => {
                                 ph.pipe_had_error = true;
                                 break;
-                            },
+                            }
                         }
                     }
                 }
                 buf
-            },
-            | IoHandle::Stdin { filehandle_pushback } => {
+            }
+            IoHandle::Stdin {
+                filehandle_pushback,
+            } => {
                 let mut buf = Vec::new();
                 if let Some(b) = filehandle_pushback.take() {
                     buf.push(b);
                 }
                 let _ = std::io::stdin().lock().read_to_end(&mut buf);
                 buf
-            },
-            | _ => Vec::new(),
+            }
+            _ => Vec::new(),
         }
     }
 }
@@ -161,7 +163,7 @@ unsafe fn handle_read_all(handle: *mut IoHandle) -> Vec<u8> {
 unsafe fn handle_read_n(handle: *mut IoHandle, n: usize) -> Vec<u8> {
     unsafe {
         match &mut *handle {
-            | IoHandle::File(fh) => {
+            IoHandle::File(fh) => {
                 let mut buf = Vec::with_capacity(n);
                 if let Some(b) = fh.filehandle_pushback.take() {
                     buf.push(b);
@@ -174,8 +176,8 @@ unsafe fn handle_read_n(handle: *mut IoHandle, n: usize) -> Vec<u8> {
                     buf.truncate(start + nr);
                 }
                 buf
-            },
-            | IoHandle::Pipe(ph) => {
+            }
+            IoHandle::Pipe(ph) => {
                 let mut buf = vec![0u8; n];
                 let nr = if let Some(ref mut reader) = ph.pipe_reader {
                     reader.read(&mut buf).unwrap_or(0)
@@ -184,8 +186,10 @@ unsafe fn handle_read_n(handle: *mut IoHandle, n: usize) -> Vec<u8> {
                 };
                 buf.truncate(nr);
                 buf
-            },
-            | IoHandle::Stdin { filehandle_pushback } => {
+            }
+            IoHandle::Stdin {
+                filehandle_pushback,
+            } => {
                 let mut buf = Vec::with_capacity(n);
                 if let Some(b) = filehandle_pushback.take() {
                     buf.push(b);
@@ -197,8 +201,8 @@ unsafe fn handle_read_n(handle: *mut IoHandle, n: usize) -> Vec<u8> {
                     buf.extend_from_slice(&tmp[..nr]);
                 }
                 buf
-            },
-            | _ => Vec::new(),
+            }
+            _ => Vec::new(),
         }
     }
 }
@@ -231,7 +235,11 @@ pub unsafe fn f_tostring(state: *mut State) -> i32 {
         if (*p).stream_cfunctionclose.is_none() {
             lua_pushstring(state, c"file (closed)".as_ptr());
         } else {
-            lua_pushfstring(state, c"file (%p)".as_ptr(), &[((*p).stream_handle as *mut std::ffi::c_void).into()]);
+            lua_pushfstring(
+                state,
+                c"file (%p)".as_ptr(),
+                &[((*p).stream_handle as *mut std::ffi::c_void).into()],
+            );
         }
         1
     }
@@ -339,8 +347,8 @@ pub unsafe fn io_pclose(state: *mut State) -> i32 {
             ph.pipe_writer = None;
             use std::os::unix::process::ExitStatusExt;
             match ph.pipe_child.wait() {
-                | Ok(status) => status.into_raw(),
-                | Err(_) => -1,
+                Ok(status) => status.into_raw(),
+                Err(_) => -1,
             }
         } else {
             0
@@ -369,8 +377,8 @@ pub unsafe fn opencheck(state: *mut State, fname: *const i8, mode: *const i8) {
         let fname_str = std::ffi::CStr::from_ptr(fname).to_string_lossy();
         let mode_bytes = std::ffi::CStr::from_ptr(mode).to_bytes();
         match open_opts_from_mode(mode_bytes) {
-            | Some(opts) => match opts.open(fname_str.as_ref()) {
-                | Ok(file) => {
+            Some(opts) => match opts.open(fname_str.as_ref()) {
+                Ok(file) => {
                     let fh = if mode_has_write(mode_bytes) {
                         FileHandle::new_buffered(file)
                     } else {
@@ -378,17 +386,21 @@ pub unsafe fn opencheck(state: *mut State, fname: *const i8, mode: *const i8) {
                     };
                     let handle = Box::into_raw(Box::new(IoHandle::File(fh)));
                     (*p).stream_handle = handle;
-                },
-                | Err(e) => {
+                }
+                Err(e) => {
                     if let Some(code) = e.raw_os_error() {
                         set_errno(code);
                     }
-                    lual_error(state, c"cannot open file '%s' (%s)".as_ptr(), &[fname.into(), os_strerror(get_errno()).into()]);
-                },
+                    lual_error(
+                        state,
+                        c"cannot open file '%s' (%s)".as_ptr(),
+                        &[fname.into(), os_strerror(get_errno()).into()],
+                    );
+                }
             },
-            | None => {
+            None => {
                 lual_error(state, c"invalid mode".as_ptr(), &[]);
-            },
+            }
         }
     }
 }
@@ -406,8 +418,8 @@ pub unsafe fn io_open(state: *mut State) -> i32 {
         let fname_str = std::ffi::CStr::from_ptr(fname).to_string_lossy();
         set_errno(0);
         match open_opts_from_mode(mode_bytes) {
-            | Some(opts) => match opts.open(fname_str.as_ref()) {
-                | Ok(file) => {
+            Some(opts) => match opts.open(fname_str.as_ref()) {
+                Ok(file) => {
                     let fh = if mode_has_write(mode_bytes) {
                         FileHandle::new_buffered(file)
                     } else {
@@ -416,15 +428,15 @@ pub unsafe fn io_open(state: *mut State) -> i32 {
                     let handle = Box::into_raw(Box::new(IoHandle::File(fh)));
                     (*p).stream_handle = handle;
                     1
-                },
-                | Err(e) => {
+                }
+                Err(e) => {
                     if let Some(code) = e.raw_os_error() {
                         set_errno(code);
                     }
                     lual_fileresult(state, 0, fname)
-                },
+                }
             },
-            | None => lual_argerror(state, 2, c"invalid mode".as_ptr()),
+            None => lual_argerror(state, 2, c"invalid mode".as_ptr()),
         }
     }
 }
@@ -452,19 +464,23 @@ pub unsafe fn io_popen(state: *mut State) -> i32 {
             cmd.stdin(std::process::Stdio::piped());
         }
         match cmd.spawn() {
-            | Ok(child) => {
-                let ph = if is_read { PipeHandle::new_read(child) } else { PipeHandle::new_write(child) };
+            Ok(child) => {
+                let ph = if is_read {
+                    PipeHandle::new_read(child)
+                } else {
+                    PipeHandle::new_write(child)
+                };
                 let handle = Box::into_raw(Box::new(IoHandle::Pipe(ph)));
                 (*p).stream_handle = handle;
                 (*p).stream_cfunctionclose = Some(io_pclose as unsafe fn(*mut State) -> i32);
                 1
-            },
-            | Err(e) => {
+            }
+            Err(e) => {
                 if let Some(code) = e.raw_os_error() {
                     set_errno(code);
                 }
                 lual_fileresult(state, 0, filename)
-            },
+            }
         }
     }
 }
@@ -476,20 +492,25 @@ pub unsafe fn io_tmpfile(state: *mut State) -> i32 {
         let dir = std::env::temp_dir();
         for i in 0u32..1000 {
             let path = dir.join(format!("lua_tmp_{}_{}", std::process::id(), i));
-            match OpenOptions::new().read(true).write(true).create_new(true).open(&path) {
-                | Ok(file) => {
+            match OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create_new(true)
+                .open(&path)
+            {
+                Ok(file) => {
                     std::fs::remove_file(&path).ok(); // unlink immediately — anonymous temp file
                     let handle = Box::into_raw(Box::new(IoHandle::File(FileHandle::new_buffered(file))));
                     (*p).stream_handle = handle;
                     return 1;
-                },
-                | Err(ref e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
-                | Err(e) => {
+                }
+                Err(ref e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(e) => {
                     if let Some(code) = e.raw_os_error() {
                         set_errno(code);
                     }
                     return lual_fileresult(state, 0, null());
-                },
+                }
             }
         }
         set_errno(17); // EEXIST
@@ -504,7 +525,11 @@ pub unsafe fn getiofile(state: *mut State, findex: *const i8) -> *mut IoHandle {
         lua_getfield(state, LUA_REGISTRYINDEX, findex);
         let p = (*state).to_pointer(-1) as *mut Stream;
         if (*p).stream_cfunctionclose.is_none() {
-            lual_error(state, c"default %s file is closed".as_ptr(), &[findex.add(4).into()]);
+            lual_error(
+                state,
+                c"default %s file is closed".as_ptr(),
+                &[findex.add(4).into()],
+            );
         }
         (*p).stream_handle
     }
@@ -556,12 +581,12 @@ unsafe fn read_number(state: *mut State, handle: *mut IoHandle) -> i32 {
         // Skip leading whitespace
         let mut c = loop {
             match (*handle).read_byte() {
-                | None => {
+                None => {
                     (*state).push_nil();
                     return 0;
-                },
-                | Some(b) if (b as char).is_ascii_whitespace() => continue,
-                | Some(b) => break b,
+                }
+                Some(b) if (b as char).is_ascii_whitespace() => continue,
+                Some(b) => break b,
             }
         };
 
@@ -572,15 +597,15 @@ unsafe fn read_number(state: *mut State, handle: *mut IoHandle) -> i32 {
                 return 0;
             }
             c = match (*handle).read_byte() {
-                | Some(b) => b,
-                | None => {
+                Some(b) => b,
+                None => {
                     buf[n] = 0;
                     if lua_stringtonumber(state, buf.as_mut_ptr()) != 0 {
                         return 1;
                     }
                     (*state).push_nil();
                     return 0;
-                },
+                }
             };
         }
 
@@ -595,8 +620,8 @@ unsafe fn read_number(state: *mut State, handle: *mut IoHandle) -> i32 {
             }
             count = 1;
             c = match (*handle).read_byte() {
-                | Some(b) => b,
-                | None => {
+                Some(b) => b,
+                None => {
                     buf[n] = 0;
                     return if lua_stringtonumber(state, buf.as_mut_ptr()) != 0 {
                         1
@@ -604,7 +629,7 @@ unsafe fn read_number(state: *mut State, handle: *mut IoHandle) -> i32 {
                         (*state).push_nil();
                         0
                     };
-                },
+                }
             };
             if c == b'x' || c == b'X' {
                 hex = true;
@@ -618,7 +643,11 @@ unsafe fn read_number(state: *mut State, handle: *mut IoHandle) -> i32 {
 
         // Integer digits
         loop {
-            let is_digit = if hex { c.is_ascii_hexdigit() } else { c.is_ascii_digit() };
+            let is_digit = if hex {
+                c.is_ascii_hexdigit()
+            } else {
+                c.is_ascii_digit()
+            };
             if !is_digit {
                 break;
             }
@@ -643,7 +672,11 @@ unsafe fn read_number(state: *mut State, handle: *mut IoHandle) -> i32 {
             }
             c = (*handle).read_byte().unwrap_or(0);
             loop {
-                let is_digit = if hex { c.is_ascii_hexdigit() } else { c.is_ascii_digit() };
+                let is_digit = if hex {
+                    c.is_ascii_hexdigit()
+                } else {
+                    c.is_ascii_digit()
+                };
                 if !is_digit {
                     break;
                 }
@@ -699,15 +732,15 @@ unsafe fn read_number(state: *mut State, handle: *mut IoHandle) -> i32 {
 unsafe fn test_eof(state: *mut State, handle: *mut IoHandle) -> i32 {
     unsafe {
         match (*handle).read_byte() {
-            | None => {
+            None => {
                 lua_pushstring(state, c"".as_ptr());
                 0
-            },
-            | Some(b) => {
+            }
+            Some(b) => {
                 (*handle).unread_byte(b);
                 lua_pushstring(state, c"".as_ptr());
                 1
-            },
+            }
         }
     }
 }
@@ -725,24 +758,27 @@ unsafe fn read_line(state: *mut State, handle: *mut IoHandle, chop: i32) -> i32 
             let mut i = 0usize;
             loop {
                 match (*handle).read_byte() {
-                    | None => {
-                        b.buffer_loads.set_length(b.buffer_loads.get_length() as usize + i);
+                    None => {
+                        b.buffer_loads
+                            .set_length(b.buffer_loads.get_length() as usize + i);
                         last_c = None;
                         break 'outer;
-                    },
-                    | Some(b'\n') => {
-                        b.buffer_loads.set_length(b.buffer_loads.get_length() as usize + i);
+                    }
+                    Some(b'\n') => {
+                        b.buffer_loads
+                            .set_length(b.buffer_loads.get_length() as usize + i);
                         last_c = Some(b'\n');
                         break 'outer;
-                    },
-                    | Some(byte) => {
+                    }
+                    Some(byte) => {
                         buf[i] = byte;
                         i += 1;
                         if i == IO_BUFFERSIZE {
-                            b.buffer_loads.set_length(b.buffer_loads.get_length() as usize + i);
+                            b.buffer_loads
+                                .set_length(b.buffer_loads.get_length() as usize + i);
                             break;
                         }
-                    },
+                    }
                 }
             }
         }
@@ -753,7 +789,8 @@ unsafe fn read_line(state: *mut State, handle: *mut IoHandle, chop: i32) -> i32 
         {
             let ptr = b.prepare_with_size(1);
             *ptr = b'\n' as i8;
-            b.buffer_loads.set_length(b.buffer_loads.get_length() as usize + 1);
+            b.buffer_loads
+                .set_length(b.buffer_loads.get_length() as usize + 1);
         }
 
         b.push_result();
@@ -807,21 +844,25 @@ pub unsafe fn g_read(state: *mut State, handle: *mut IoHandle, first: i32) -> i3
                 }
                 if lua_type(state, n) == Some(TagType::Numeric) {
                     let l = lual_checkinteger(state, n) as usize;
-                    ok = if l == 0 { test_eof(state, handle) } else { read_chars(state, handle, l) };
+                    ok = if l == 0 {
+                        test_eof(state, handle)
+                    } else {
+                        read_chars(state, handle, l)
+                    };
                 } else {
                     let mut p = lual_checklstring(state, n, null_mut());
                     if *p == b'*' as i8 {
                         p = p.add(1);
                     }
                     match *p as u8 {
-                        | b'n' => ok = read_number(state, handle),
-                        | b'l' => ok = read_line(state, handle, 1),
-                        | b'L' => ok = read_line(state, handle, 0),
-                        | b'a' => {
+                        b'n' => ok = read_number(state, handle),
+                        b'l' => ok = read_line(state, handle, 1),
+                        b'L' => ok = read_line(state, handle, 0),
+                        b'a' => {
                             read_all(state, handle);
                             ok = 1;
-                        },
-                        | _ => return lual_argerror(state, n, c"invalid format".as_ptr()),
+                        }
+                        _ => return lual_argerror(state, n, c"invalid format".as_ptr()),
                     }
                 }
                 n += 1;
@@ -860,7 +901,11 @@ pub unsafe fn aux_lines(state: *mut State, to_close: bool) {
         (*state).push_integer(n as i64);
         (*state).push_boolean(to_close);
         lua_rotate(state, 2, 3);
-        lua_pushcclosure(state, Some(io_readline as unsafe fn(*mut State) -> i32), 3 + n);
+        lua_pushcclosure(
+            state,
+            Some(io_readline as unsafe fn(*mut State) -> i32),
+            3 + n,
+        );
     }
 }
 
@@ -920,7 +965,11 @@ pub unsafe fn io_readline(state: *mut State) -> i32 {
             return n_read;
         }
         if n_read > 1 {
-            return lual_error(state, c"%s".as_ptr(), &[lua_tolstring(state, -n_read + 1, null_mut()).into()]);
+            return lual_error(
+                state,
+                c"%s".as_ptr(),
+                &[lua_tolstring(state, -n_read + 1, null_mut()).into()],
+            );
         }
         if lua_toboolean(state, LUA_REGISTRYINDEX - 3) {
             lua_settop(state, 0);
@@ -957,7 +1006,11 @@ pub unsafe fn g_write(state: *mut State, handle: *mut IoHandle, mut arg: i32) ->
             arg += 1;
         }
 
-        if status { 1 } else { lual_fileresult(state, 0, null()) }
+        if status {
+            1
+        } else {
+            lual_fileresult(state, 0, null())
+        }
     }
 }
 
@@ -987,33 +1040,33 @@ pub unsafe fn f_seek(state: *mut State) -> i32 {
         set_errno(0);
 
         let seek_from = match SEEK_MODES[op] {
-            | SeekFrom::Start(_) => {
+            SeekFrom::Start(_) => {
                 if offset < 0 {
                     return lual_argerror(state, 3, c"not an integer in proper range".as_ptr());
                 }
                 SeekFrom::Start(offset as u64)
-            },
-            | SeekFrom::Current(_) => SeekFrom::Current(offset),
-            | SeekFrom::End(_) => SeekFrom::End(offset),
+            }
+            SeekFrom::Current(_) => SeekFrom::Current(offset),
+            SeekFrom::End(_) => SeekFrom::End(offset),
         };
 
         match &mut *handle {
-            | IoHandle::File(fh) => {
+            IoHandle::File(fh) => {
                 fh.flush_write_buf();
                 match fh.filehandle_file.seek(seek_from) {
-                    | Ok(pos) => {
+                    Ok(pos) => {
                         (*state).push_integer(pos as i64);
                         1
-                    },
-                    | Err(e) => {
+                    }
+                    Err(e) => {
                         if let Some(code) = e.raw_os_error() {
                             set_errno(code);
                         }
                         lual_fileresult(state, 0, null())
-                    },
+                    }
                 }
-            },
-            | IoHandle::Pipe(_) | IoHandle::Stdin { .. } | IoHandle::Stdout | IoHandle::Stderr => lual_fileresult(state, 0, null()),
+            }
+            IoHandle::Pipe(_) | IoHandle::Stdin { .. } | IoHandle::Stdout | IoHandle::Stderr => lual_fileresult(state, 0, null()),
         }
     }
 }
@@ -1028,9 +1081,9 @@ pub unsafe fn f_setvbuf(state: *mut State) -> i32 {
             // Flush any pending write buffer before changing mode
             fh.flush_write_buf();
             fh.filehandle_write_buffer_mode = match opt {
-                | 0 => WriteBufferMode::No,
-                | 1 => WriteBufferMode::Full(size),
-                | _ => WriteBufferMode::Line,
+                0 => WriteBufferMode::No,
+                1 => WriteBufferMode::Full(size),
+                _ => WriteBufferMode::Line,
             };
         }
         lual_fileresult(state, 1, null())
@@ -1180,7 +1233,9 @@ pub unsafe fn luaopen_io(state: *mut State) -> i32 {
         // Allocate heap handles for the standard streams. These are intentionally
         // not freed during normal operation (io_noclose prevents user close), and
         // are freed by f_gc when the Lua state is closed.
-        let stdin_h = Box::into_raw(Box::new(IoHandle::Stdin { filehandle_pushback: None }));
+        let stdin_h = Box::into_raw(Box::new(IoHandle::Stdin {
+            filehandle_pushback: None,
+        }));
         let stdout_h = Box::into_raw(Box::new(IoHandle::Stdout));
         let stderr_h = Box::into_raw(Box::new(IoHandle::Stderr));
         createstdfile(state, stdin_h, c"_IO_input".as_ptr(), c"stdin".as_ptr());

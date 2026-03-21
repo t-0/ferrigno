@@ -57,17 +57,17 @@ fn parse_args(args: &[String]) -> Options {
             break;
         }
         match arg.as_str() {
-            | "-l" => opts.listing += 1,
-            | "-o" => {
+            "-l" => opts.listing += 1,
+            "-o" => {
                 i += 1;
                 if i >= args.len() {
                     usage();
                 }
                 opts.output = args[i].clone();
-            },
-            | "-p" => opts.parse_only = true,
-            | "-s" => opts.strip = true,
-            | _ => usage(),
+            }
+            "-p" => opts.parse_only = true,
+            "-s" => opts.strip = true,
+            _ => usage(),
         }
         i += 1;
     }
@@ -107,9 +107,15 @@ unsafe fn load_file(state: *mut State, filename: &str) -> Status {
 unsafe fn get_prototype(state: *mut State, offset: isize) -> *mut Prototype {
     unsafe {
         let ptr = if offset >= 0 {
-            (*state).interpreter_top.stkidrel_pointer.add(offset as usize)
+            (*state)
+                .interpreter_top
+                .stkidrel_pointer
+                .add(offset as usize)
         } else {
-            (*state).interpreter_top.stkidrel_pointer.sub((-offset) as usize)
+            (*state)
+                .interpreter_top
+                .stkidrel_pointer
+                .sub((-offset) as usize)
         };
         let o = &*ptr;
         let cl = o.as_closure().unwrap();
@@ -143,7 +149,13 @@ unsafe fn combine(state: *mut State, n: i32) -> *const Prototype {
         }
 
         let csrc = std::ffi::CString::new(src).unwrap();
-        let status = lual_loadbufferx(state, csrc.as_ptr(), csrc.as_bytes().len(), c"=(ferrignoc)".as_ptr(), null());
+        let status = lual_loadbufferx(
+            state,
+            csrc.as_ptr(),
+            csrc.as_bytes().len(),
+            c"=(ferrignoc)".as_ptr(),
+            null(),
+        );
         if status != Status::OK {
             fatal("failed to create wrapper chunk");
         }
@@ -166,7 +178,10 @@ unsafe fn combine(state: *mut State, n: i32) -> *const Prototype {
                 uv.upvaluedescription_index = 0;
             }
 
-            *(*wrapper_proto).prototype_prototypes.vectort_pointer.add(i as usize) = sub_proto;
+            *(*wrapper_proto)
+                .prototype_prototypes
+                .vectort_pointer
+                .add(i as usize) = sub_proto;
         }
 
         wrapper_proto
@@ -205,7 +220,11 @@ unsafe fn print_header(proto: *const Prototype) {
         } else {
             eprint!("\n{} <{}:{},{}> ", kind, source, first_line, last_line);
         }
-        eprintln!("({} instruction{})", n_code, if n_code == 1 { "" } else { "s" });
+        eprintln!(
+            "({} instruction{})",
+            n_code,
+            if n_code == 1 { "" } else { "s" }
+        );
         eprintln!(
             "{}{} param{}, {} slot{}, {} upvalue{}, {} local{}, {} constant{}, {} function{}",
             n_params,
@@ -300,8 +319,8 @@ fn main() {
 
     unsafe {
         let state = match LuaState::new() {
-            | None => fatal("cannot create state: not enough memory"),
-            | Some(s) => s,
+            None => fatal("cannot create state: not enough memory"),
+            Some(s) => s,
         };
         let state = state.state();
         lua_gc(state, 0, &[]);

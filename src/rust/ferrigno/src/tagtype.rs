@@ -18,8 +18,8 @@ pub enum TagType {
 impl TagType {
     pub fn is_none_or_nil(tagtype: Option<TagType>) -> bool {
         match tagtype {
-            | None | Some(TagType::Nil) => true,
-            | _ => false,
+            None | Some(TagType::Nil) => true,
+            _ => false,
         }
     }
     pub fn is_nil(&self) -> bool {

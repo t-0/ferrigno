@@ -62,7 +62,11 @@ unsafe fn ft_reduce(state: *mut State) -> i32 {
             start = 1;
         } else {
             if len == 0 {
-                return lual_error(state, c"reduce of empty table with no initial value".as_ptr(), &[]);
+                return lual_error(
+                    state,
+                    c"reduce of empty table with no initial value".as_ptr(),
+                    &[],
+                );
             }
             lua_rawgeti(state, 2, 1);
             start = 2;
@@ -156,7 +160,11 @@ unsafe fn ft_compose(state: *mut State) -> i32 {
     unsafe {
         let nargs = (*state).get_top();
         if nargs == 0 {
-            return lual_error(state, c"compose requires at least one function".as_ptr(), &[]);
+            return lual_error(
+                state,
+                c"compose requires at least one function".as_ptr(),
+                &[],
+            );
         }
         (*state).lua_createtable();
         for i in 1..=nargs {
@@ -182,7 +190,7 @@ unsafe fn memoize_call(state: *mut State) -> i32 {
                 return 1; // cached
             }
             lua_settop(state, -2); // pop nil
-            // call f
+                                   // call f
             lua_pushvalue(state, UPVALUE1);
             lua_pushvalue(state, 1);
             (*state).lua_callk(1, 1, 0, None);
@@ -213,7 +221,7 @@ unsafe fn memoize_call(state: *mut State) -> i32 {
                 return 1;
             }
             lua_settop(state, -2); // pop nil, key dup still on stack
-            // call f with original args
+                                   // call f with original args
             lua_pushvalue(state, UPVALUE1);
             for i in 1..=nargs {
                 lua_pushvalue(state, i);
@@ -223,8 +231,8 @@ unsafe fn memoize_call(state: *mut State) -> i32 {
             lua_rotate(state, -2, 1); // result key → key result
             lua_pushvalue(state, -1); // dup result
             lua_rotate(state, -3, 1); // result key result → key result result? nope
-            // let me just: we have key at -2, result at -1
-            // we need rawset(cache, key, result) then return result
+                                      // let me just: we have key at -2, result at -1
+                                      // we need rawset(cache, key, result) then return result
             lua_pushvalue(state, -2); // push key → key result key
             lua_pushvalue(state, -2); // push result → key result key result
             lua_rawset(state, UPVALUE2); // cache[key] = result → key result
@@ -371,7 +379,12 @@ pub const FUNCTOOLS_FUNCTIONS: [RegisteredFunction; 10] = [
 pub unsafe fn luaopen_functools(state: *mut State) -> i32 {
     unsafe {
         (*state).lua_createtable();
-        lual_setfuncs(state, FUNCTOOLS_FUNCTIONS.as_ptr(), FUNCTOOLS_FUNCTIONS.len(), 0);
+        lual_setfuncs(
+            state,
+            FUNCTOOLS_FUNCTIONS.as_ptr(),
+            FUNCTOOLS_FUNCTIONS.len(),
+            0,
+        );
         1
     }
 }
