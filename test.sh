@@ -1,45 +1,68 @@
 #! /usr/bin/env bash
 
-RUST_TARGET_D=$(rustc -vV | awk '/^host:/ { print $2 }')
-for RUST_PROFILE in debug release
-do
-    if [[ "$RUST_PROFILE" == "release" ]]
+
+__test_inner__() {
+    unset -f __test_inner__
+
+    local __target_d
+    __target_d=$(rustc -vV | awk '/^host:/ { print $2 }')
+    if [[ -z "${__target_d}" ]]
     then
-        if ! RUSTFLAGS="-Awarnings" CARGO_TARGET_DIR="target/${RUST_TARGET_D}" cargo build --release
+        printf "ERROR: could not determine host triple from rustc\n" 1>&2
+        return 1
+    fi
+
+    local __it
+    for __it in debug release
+    do
+        local -a __cargo_args=(--target "${__target_d}")
+        [[ "${__it}" == "release" ]] && __cargo_args+=(--release)
+        if ! cargo test "${__cargo_args[@]}"
         then
-            printf "ERROR\n" 1>&2
-            exit 1
+            printf "ERROR: cargo test failed\n" 1>&2
+            return 1
         fi
-    else
-        if ! RUSTFLAGS="-Awarnings" CARGO_TARGET_DIR="target/${RUST_TARGET_D}" cargo build
+        local __ferrigno
+        __ferrigno="${PWD}/target/${__target_d}/${__it}/ferrigno"
+        if ! (cd "src/rust/ferrigno/lua/tests" && RUST_BACKTRACE=1 "${__ferrigno}" --bare -e"_U=true" all.lua)
         then
-            printf "ERROR\n" 1>&2
-            exit 1
+            printf "ERROR: lua tests failed (%s)\n" "$__it" 1>&2
+            return 1
         fi
-    fi
-    if ! pushd "src/rust/ferrigno/lua/tests"
+        if ! RUST_BACKTRACE=1 "${__ferrigno}" --bare -e"_U=true" "@tests/all.lua"
+        then
+            printf "ERROR: @tests/all.lua failed (%s)\n" "$__it" 1>&2
+            return 1
+        fi
+    done
+    return 0
+}
+
+__test__() {
+    unset -f __test__
+
+    local __repo_d
+    __repo_d="$(dirname "${BASH_SOURCE[0]}")"
+    if ! "${__repo_d}/build.sh"
     then
-        printf "ERROR\n" 1>&2
-        exit 1
+        unset -f __test_inner__
+        return 1
     fi
-    if ! RUST_BACKTRACE=1 "../../../../../target/${RUST_TARGET_D}/${RUST_PROFILE}/ferrigno" --bare -e"_U=true" all.lua
+    if ! pushd "${__repo_d}" >/dev/null
     then
-        printf "ERROR\n" 1>&2
-        exit 1
+        unset -f __test_inner__
+        printf "ERROR: could not pushd directory\n" 1>&2
+        return 1
     fi
-    if ! popd
+    local __ret
+    __test_inner__ "${@}"
+    __ret=$?
+    if ! popd >/dev/null
     then
-        printf "ERROR\n" 1>&2
-        exit 1
+        printf "ERROR: could not pop directory\n" 1>&2
     fi
-    if ! RUST_BACKTRACE=1 "./target/${RUST_TARGET_D}/${RUST_PROFILE}/ferrigno" --bare -e"_U=true" "@tests/all.lua"
-    then
-        printf "ERROR\n" 1>&2
-        exit 1
-    fi
-    if ! git add .
-    then
-        printf "ERROR\n" 1>&2
-        exit 1
-    fi
-done
+    return "${__ret}"
+}
+
+
+__test__ "${@}"
