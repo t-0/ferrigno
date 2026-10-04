@@ -706,3 +706,40 @@ fn string_format_q_special_floats() {
     );
     assert!(out.trim() == "1e9999\t-1e9999\t(0/0)");
 }
+
+// ═══════════════════════════════════════════════════════════════
+// os library
+// ═══════════════════════════════════════════════════════════════
+
+fn run_ok_in_timezone(timezone: &str, code: &str) -> String {
+    let bin = std::env::var("CARGO_BIN_EXE_ferrigno").unwrap_or_else(|_| {
+        let test_exe = std::env::current_exe().expect("cannot locate test binary");
+        let deps_dir = test_exe.parent().expect("no parent dir");
+        let profile_dir = deps_dir.parent().expect("no profile dir");
+        profile_dir.join("ferrigno").to_string_lossy().into_owned()
+    });
+    let output = Command::new(bin)
+        .env("TZ", timezone)
+        .args(["--bare", "-e", code])
+        .output()
+        .expect("failed to run ferrigno");
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    String::from_utf8_lossy(&output.stdout).to_string()
+}
+
+/// macOS mktime returns a wrong time instead of -1 when the year overflows
+/// an int, in zones without a DST offset such as UTC. The interpreter must
+/// detect the overflow itself. (The Lua 5.5 suite checks this in files.lua.)
+#[test]
+fn os_time_year_overflow_is_an_error_in_every_timezone() {
+    for timezone in ["UTC", "Europe/London", "America/Los_Angeles", "Asia/Tokyo"] {
+        let out = run_ok_in_timezone(
+            timezone,
+            "local max = {year=(1 << 31) + 1899, month=12, day=31, hour=23, min=59, sec=59}; \
+             local over = {year=(1 << 31) + 1899, month=12, day=31, hour=23, min=59, sec=60}; \
+             local ok, err = pcall(os.time, over); \
+             print(type(os.time(max)), ok, err)",
+        );
+        assert_eq!(out.trim(), "number\tfalse\ttime result cannot be represented in this installation", "TZ={}", timezone);
+    }
+}

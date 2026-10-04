@@ -333,6 +333,41 @@ pub unsafe fn os_date(state: *mut State) -> i32 {
         1
     }
 }
+/// Days since 1970-01-01 of a proleptic Gregorian date (Howard Hinnant's algorithm).
+fn days_from_civil(year: i64, month: i64, day: i64) -> i64 {
+    let y = if month <= 2 { year - 1 } else { year };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let mp = (month + 9) % 12;
+    let doy = (153 * mp + 2) / 5 + day - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    era * 146097 + doe - 719468
+}
+/// The calendar year containing the given day number (inverse of `days_from_civil`).
+fn year_from_days(days: i64) -> i64 {
+    let z = days + 719468;
+    let era = z.div_euclid(146097);
+    let doe = z - era * 146097;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let year = yoe + era * 400;
+    if mp < 10 { year } else { year + 1 }
+}
+/// The calendar year `mktime` will normalize `tm` to, in 64-bit arithmetic.
+///
+/// `mktime` carries out-of-range fields into the year, and when the result
+/// does not fit the C `int` it must return -1. macOS `mktime` instead returns
+/// a wrong time in zones without a DST offset, so the overflow is detected
+/// here before the call.
+fn normalized_year(tm: &Tm) -> i64 {
+    let months = tm.tm_year as i64 * 12 + tm.tm_mon as i64;
+    let year = 1900 + months.div_euclid(12);
+    let month = months.rem_euclid(12) + 1;
+    let seconds = tm.tm_sec as i64 + 60 * tm.tm_min as i64 + 3600 * tm.tm_hour as i64;
+    let days = days_from_civil(year, month, 1) + (tm.tm_mday as i64 - 1) + seconds.div_euclid(86400);
+    year_from_days(days)
+}
 pub unsafe fn os_time(state: *mut State) -> i32 {
     unsafe {
         let sometime: i64;
@@ -351,6 +386,14 @@ pub unsafe fn os_time(state: *mut State) -> i32 {
                 timestruct.tm_min = getfield(state, c"min".as_ptr(), 0, 0);
                 timestruct.tm_sec = getfield(state, c"sec".as_ptr(), 0, 0);
                 timestruct.tm_isdst = getboolfield(state, c"isdst".as_ptr());
+                let year = normalized_year(&timestruct) - 1900;
+                if year < i32::MIN as i64 || year > i32::MAX as i64 {
+                    return lual_error(
+                        state,
+                        c"time result cannot be represented in this installation".as_ptr(),
+                        &[],
+                    );
+                }
                 sometime = mktime(&mut timestruct);
                 setallfields(state, &mut timestruct);
             }
