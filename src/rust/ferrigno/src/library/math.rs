@@ -565,11 +565,11 @@ pub unsafe fn luaopen_math(state: *mut State) -> i32 {
         lual_setfuncs(state, MATH_FUNCTIONS.as_ptr(), MATH_FUNCTIONS.len(), 0);
         (*state).push_number(PI);
         lua_setfield(state, -2, c"pi".as_ptr());
-        (*state).push_number(::core::f64::INFINITY);
+        (*state).push_number(f64::INFINITY);
         lua_setfield(state, -2, c"huge".as_ptr());
-        (*state).push_integer(::core::i64::MAX);
+        (*state).push_integer(i64::MAX);
         lua_setfield(state, -2, c"maxinteger".as_ptr());
-        (*state).push_integer(::core::i64::MIN);
+        (*state).push_integer(i64::MIN);
         lua_setfield(state, -2, c"mininteger".as_ptr());
         set_random_function(state);
         1

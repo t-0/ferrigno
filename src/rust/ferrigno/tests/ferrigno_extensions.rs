@@ -694,3 +694,15 @@ fn itertools_cycle() {
     );
     assert!(out.trim() == "6\t1\t2");
 }
+
+// ═══════════════════════════════════════════════════════════════
+// string library
+// ═══════════════════════════════════════════════════════════════
+
+#[test]
+fn string_format_q_special_floats() {
+    let out = run_ok(
+        "print(string.format('%q', math.huge), string.format('%q', -math.huge), string.format('%q', 0/0))",
+    );
+    assert!(out.trim() == "1e9999\t-1e9999\t(0/0)");
+}

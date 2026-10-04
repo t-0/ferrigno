@@ -50,7 +50,7 @@ struct Winsize {
 unsafe extern "C" {
     fn tcgetattr(fd: i32, termios: *mut Termios) -> i32;
     fn tcsetattr(fd: i32, optional_actions: i32, termios: *const Termios) -> i32;
-    fn read(fd: i32, buf: *mut u8, count: usize) -> isize;
+    fn read(fd: i32, buf: *mut ::std::ffi::c_void, count: usize) -> isize;
     fn poll(fds: *mut Pollfd, nfds: u64, timeout: i32) -> i32;
     fn ioctl(fd: i32, request: u64, ...) -> i32;
     fn atexit(function: extern "C" fn()) -> i32;
@@ -117,7 +117,7 @@ unsafe fn read_byte(timeout_ms: i32) -> Option<u8> {
             return None;
         }
         let mut b: u8 = 0;
-        let n = read(STDIN_FILENO, &mut b, 1);
+        let n = read(STDIN_FILENO, &mut b as *mut u8 as *mut ::std::ffi::c_void, 1);
         if n == 1 {
             Some(b)
         } else {

@@ -15,7 +15,7 @@ __test_inner__() {
     local __it
     for __it in debug release
     do
-        local -a __cargo_args=(--target "${__target_d}")
+        local -a __cargo_args=(--target "${__target_d}" --features full)
         [[ "${__it}" == "release" ]] && __cargo_args+=(--release)
         if ! cargo test "${__cargo_args[@]}"
         then

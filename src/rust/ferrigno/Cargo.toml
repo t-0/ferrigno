@@ -16,3 +16,14 @@ path = "src/bin/ferrigno-interpreter.rs"
 [[bin]]
 name = "ferrignoc"
 path = "src/bin/ferrigno-compiler.rs"
+
+[features]
+default = []
+# Libraries that link against native system libraries. Each is off by default
+# so that the crate builds with no dependencies beyond libc.
+sqlite = []    # `sqlite` library; links libsqlite3
+requests = []  # `requests` library; links libcurl
+urllib = []    # `urllib` library; links libcurl
+midi = []      # `midi` library; links CoreMIDI (macOS) or libasound (Linux)
+tui = []       # `tui` library; raw terminal control via termios
+full = ["sqlite", "requests", "urllib", "midi", "tui"]

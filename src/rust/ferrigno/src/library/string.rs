@@ -1088,9 +1088,9 @@ unsafe fn sprintf_ptr(buf: *mut i8, size: usize, form: *const i8, value: *const 
 pub unsafe fn quotefloat(mut _state: *mut State, buffer: *mut i8, n: f64) -> i32 {
     unsafe {
         let s: *const i8;
-        if n == ::core::f64::INFINITY {
+        if n == f64::INFINITY {
             s = c"1e9999".as_ptr();
-        } else if n == -::core::f64::INFINITY {
+        } else if n == f64::NEG_INFINITY {
             s = c"-1e9999".as_ptr();
         } else if n != n {
             s = c"(0/0)".as_ptr();

@@ -15,7 +15,7 @@ __build_inner__() {
     local __it
     for __it in dev release
     do
-        if ! cargo build --target "${__target_d}" --profile "${__it}"
+        if ! cargo build --target "${__target_d}" --profile "${__it}" --features full
         then
             printf "ERROR: cargo build --profile %s failed\n" "${__it}" 1>&2
             return 1
