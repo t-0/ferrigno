@@ -288,7 +288,7 @@ impl LoadState {
     pub unsafe fn load_debug(&mut self, prototype: *mut Prototype) {
         unsafe {
             let mut n = self.load_int();
-            if size_of::<i32>() >= size_of::<usize>() && (n as usize) + 1 > (!0usize) {
+            if n as usize > usize::MAX / size_of::<i32>() {
                 (*(self.loadstate_interpreter)).too_big();
             }
             if self.loadstate_fixed {

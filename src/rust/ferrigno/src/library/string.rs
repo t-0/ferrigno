@@ -1092,7 +1092,7 @@ pub unsafe fn quotefloat(mut _state: *mut State, buffer: *mut i8, n: f64) -> i32
             s = c"1e9999".as_ptr();
         } else if n == f64::NEG_INFINITY {
             s = c"-1e9999".as_ptr();
-        } else if n != n {
+        } else if n.is_nan() {
             s = c"(0/0)".as_ptr();
         } else {
             let out = std::slice::from_raw_parts_mut(buffer as *mut u8, 120);

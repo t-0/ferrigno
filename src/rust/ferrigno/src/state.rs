@@ -1205,8 +1205,7 @@ pub unsafe fn finishccall(state: *mut State, callinfo: *mut CallInfo) {
             if (*callinfo).callinfo_callstatus as i32 & CALLSTATUS_YPCALL != 0 {
                 status = finishpcallk(state, callinfo);
             }
-            if -1 <= -1
-                && (*(*state).interpreter_callinfo)
+            if (*(*state).interpreter_callinfo)
                     .callinfo_top
                     .stkidrel_pointer
                     < (*state).interpreter_top.stkidrel_pointer
@@ -5700,7 +5699,6 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                             trap = (*callinfo).callinfo_u.l.trap;
                             if (*state).should_step() {
                                 (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
-                                (*state).interpreter_top.stkidrel_pointer = (*state).interpreter_top.stkidrel_pointer;
                                 (*state).do_gc_step();
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }

@@ -1,4 +1,8 @@
+// The runtime is a translation of the C implementation: nearly every function
+// is `unsafe` and documenting a `# Safety` contract on each is not practical.
+#![allow(clippy::missing_safety_doc)]
 pub mod absolutelineinfo;
+pub mod api;
 pub mod blockcontrol;
 pub mod buffer;
 pub mod bufffs;

@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install native libraries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libsqlite3-dev libasound2-dev
+
+      - name: Build with default features
+        run: cargo build --release
+
+      - name: Default build links nothing beyond libc (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          ldd target/release/ferrigno
+          if ldd target/release/ferrigno | grep -E 'curl|sqlite|asound'; then
+            echo "default build must not link optional native libraries" >&2
+            exit 1
+          fi
+
+      - name: Default build links nothing beyond libc (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          otool -L target/release/ferrigno
+          if otool -L target/release/ferrigno | grep -E 'curl|sqlite|CoreMIDI'; then
+            echo "default build must not link optional native libraries" >&2
+            exit 1
+          fi
+
+      - name: Build and test with all features
+        run: ./test.sh
+
+      - name: Clippy
+        run: cargo clippy --release --features full --all-targets

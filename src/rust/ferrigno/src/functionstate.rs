@@ -898,11 +898,7 @@ pub unsafe fn savelineinfo(
         (*prototype).prototype_lineinfo.grow(
             state,
             program_counter as usize,
-            if MAX_INT <= (!(0usize)) {
-                MAX_INT
-            } else {
-                !(0usize)
-            },
+            MAX_INT,
             c"opcodes".as_ptr(),
         );
         *((*prototype).prototype_lineinfo.vectort_pointer).add(program_counter as usize) = linedif as i8;
@@ -2573,7 +2569,7 @@ pub unsafe fn constfolding(
             (*e1).expressiondescription_value.value_integer = res.as_integer().unwrap();
         } else {
             let n: f64 = res.as_number().unwrap();
-            if !(n == n) || n == 0.0 {
+            if n.is_nan() || n == 0.0 {
                 return 0;
             }
             (*e1).expressiondescription_expressionkind = ExpressionKind::ConstantNumber;

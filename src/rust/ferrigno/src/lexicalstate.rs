@@ -1,3 +1,4 @@
+#![allow(clippy::while_immutable_condition)]
 use crate::blockcontrol::*;
 use crate::buffer::*;
 use crate::character::*;

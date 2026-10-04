@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: macos-13
+            target: x86_64-apple-darwin
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install native libraries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libsqlite3-dev libasound2-dev
+
+      - name: Build
+        run: cargo build --release --features full --target ${{ matrix.target }}
+
+      - name: Package
+        run: |
+          name="ferrigno-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          mkdir "$name"
+          cp "target/${{ matrix.target }}/release/ferrigno" "target/${{ matrix.target }}/release/ferrignoc" LICENSE.md README.md "$name/"
+          tar czf "$name.tar.gz" "$name"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: ferrigno-*.tar.gz
+          generate_release_notes: true

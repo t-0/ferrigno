@@ -269,11 +269,7 @@ pub unsafe fn checkoption(state: *mut State, conv: *const i8, convlen: i64, buff
 }
 pub unsafe fn l_checktime(state: *mut State, arg: i32) -> i64 {
     unsafe {
-        let t: i64 = lual_checkinteger(state, arg);
-        if t != t {
-            lual_argerror(state, arg, c"time out-of-bounds".as_ptr());
-        }
-        t
+        lual_checkinteger(state, arg)
     }
 }
 pub unsafe fn os_date(state: *mut State) -> i32 {
@@ -359,7 +355,7 @@ pub unsafe fn os_time(state: *mut State) -> i32 {
                 setallfields(state, &mut timestruct);
             }
         };
-        if sometime != sometime || sometime == -1_i64 {
+        if sometime == -1_i64 {
             return lual_error(
                 state,
                 c"time result cannot be represented in this installation".as_ptr(),

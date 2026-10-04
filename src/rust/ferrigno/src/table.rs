@@ -429,7 +429,7 @@ pub unsafe fn mainpositiontv(t: *const Table, key: *const TValue) -> *mut Node {
                     as *mut Node
             }
             TagVariant::BooleanFalse => {
-                &mut *((*t).table_node).add((0 & ((1 << (*t).table_log_size_node as i32) - 1)) as usize) as *mut Node
+                &mut *(*t).table_node as *mut Node
             }
             TagVariant::BooleanTrue => {
                 &mut *((*t).table_node).add((1 & ((1 << (*t).table_log_size_node as i32) - 1)) as usize) as *mut Node
@@ -1132,7 +1132,7 @@ pub unsafe fn luah_finishset(state: *mut State, table: *mut Table, key: *const T
                 if F2I::Equal.convert_f64_i64(number, &mut k) {
                     aux.set_integer(k);
                     key = &aux;
-                } else if number != number {
+                } else if number.is_nan() {
                     luag_runerror(state, c"table index is NaN".as_ptr(), &[]);
                 }
             } else if (*key).get_tagvariant() == TagVariant::StringLong {
