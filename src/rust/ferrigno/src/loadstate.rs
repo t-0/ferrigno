@@ -181,14 +181,9 @@ impl LoadState {
                     self.error(c"truncated fixed chunk".as_ptr());
                 }
                 (*prototype).prototype_code.vectort_pointer = addr as *mut u32;
-                (*prototype)
-                    .prototype_code
-                    .set_size(n as usize * size_of::<u32>());
+                (*prototype).prototype_code.set_size(n as usize);
             } else {
-                (*prototype).prototype_code.initialize_size(
-                    self.loadstate_interpreter,
-                    (n as usize).wrapping_mul(size_of::<u32>()),
-                );
+                (*prototype).prototype_code.initialize_size(self.loadstate_interpreter, n as usize);
                 self.load_block(
                     (*prototype).prototype_code.vectort_pointer as *mut std::ffi::c_void,
                     (n as usize).wrapping_mul(size_of::<u32>()),

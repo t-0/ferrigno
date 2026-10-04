@@ -68,6 +68,19 @@ fn dis_c_closure() {
     assert!(out.trim() == "C");
 }
 
+/// Undump recorded the code vector size in bytes rather than instructions,
+/// so a round-tripped function reported four times as many instructions and
+/// the disassembler read past the line-info array.
+#[test]
+fn dis_instruction_count_survives_dump_round_trip() {
+    let out = run_ok(
+        "local dis = require('dis'); local function f(x) return x * x end; \
+         local rt = load(string.dump(f)); \
+         print(dis.info(f).instructions, dis.info(rt).instructions, string.dump(rt) == string.dump(f))",
+    );
+    assert_eq!(out.trim(), "4\t4\ttrue");
+}
+
 // ═══════════════════════════════════════════════════════════════
 // functools library
 // ═══════════════════════════════════════════════════════════════

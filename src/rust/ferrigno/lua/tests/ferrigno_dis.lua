@@ -90,4 +90,13 @@ local consts_c = dis.constants(print)
 assert(type(consts_c) == "table")
 assert(#consts_c == 0)
 
+-- a dump/undump round trip must preserve the instruction count; undump used
+-- to record the code size in bytes, so dis walked past the end of the code
+local function roundtrip(f) return load(string.dump(f)) end
+local rt = roundtrip(square)
+assert(dis.info(rt).instructions == dis.info(square).instructions)
+assert(#dis.opcodes(rt) == #dis.opcodes(square))
+assert(string.dump(rt) == string.dump(square))
+dis.code(rt)
+
 print'+'
