@@ -46,6 +46,7 @@ local model_files = {
     "roland/tr8s",
     "yamaha/dsr2000",
     "korg/kingkorg",
+    "korg/multipoly",
     "korg/opsix",
     "korg/wavestate",
     "waldorf/streichfett",
@@ -58,6 +59,7 @@ local model_files = {
     "behringer/rd6",
     "behringer/monopoly",
     "behringer/pro800",
+    "clavia/nord_drum",
 }
 
 for _, name in ipairs(model_files) do
